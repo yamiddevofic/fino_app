@@ -1,13 +1,38 @@
-import 'package:fino_app/models/buys_model.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:hive/hive.dart';
+import '../models/buys_model.dart';
 
 class BuyProvider with ChangeNotifier {
-  final List<Buy> _buys = [];
+  final _buyBox = Hive.box<Buy>('buysBox');
+
+  List<Buy> _buys = [];
 
   List<Buy> get buys => _buys;
 
-  void addBuy(Buy buy) {
-    _buys.add(buy);
+  BuyProvider() {
+    _loadBuys();
+  }
+
+  void _loadBuys() {
+    _buys = _buyBox.values.toList();
+    notifyListeners();
+  }
+
+  Future<void> addBuy(Buy buy) async {
+    await _buyBox.add(buy);
+    _buys = _buyBox.values.toList();
+    notifyListeners();
+  }
+
+  Future<void> deleteBuy(int index) async {
+    await _buyBox.deleteAt(index);
+    _buys = _buyBox.values.toList();
+    notifyListeners();
+  }
+
+  Future<void> updateBuy(int index, Buy updatedBuy) async {
+    await _buyBox.putAt(index, updatedBuy);
+    _buys = _buyBox.values.toList();
     notifyListeners();
   }
 }

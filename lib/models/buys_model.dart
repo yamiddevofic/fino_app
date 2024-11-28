@@ -1,5 +1,7 @@
 import 'package:hive/hive.dart';
 
+part 'buys_model.g.dart';
+
 
 @HiveType(typeId: 2)
 class Buy {

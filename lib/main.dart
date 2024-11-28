@@ -1,14 +1,33 @@
-import 'package:fino_app/provider/incomes_provider.dart';
-import 'package:fino_app/provider/expenses_provider.dart';
 import 'package:fino_app/provider/buy_provider.dart';
-import 'package:flutter/material.dart';
+import 'package:fino_app/provider/expenses_provider.dart';
+import 'package:fino_app/provider/incomes_provider.dart';
+import 'package:fino_app/screen/buys_screen.dart';
+import 'package:fino_app/screen/expenses_screen.dart';
 import 'package:fino_app/screen/home_screen.dart';
 import 'package:fino_app/screen/incomes_screen.dart';
-import 'package:fino_app/screen/expenses_screen.dart';
-import 'package:fino_app/screen/buys_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:fino_app/models/incomes_model.dart';
+import 'package:fino_app/models/expenses_model.dart';
+import 'package:fino_app/models/buys_model.dart';
 import 'package:provider/provider.dart';
 
-void main() {
+// Otras importaciones se mantienen
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializa Hive y registra adaptadores
+  await Hive.initFlutter();
+  Hive.registerAdapter(IncomeAdapter());
+  Hive.registerAdapter(ExpenseAdapter());
+  Hive.registerAdapter(BuyAdapter());
+
+  // Abre las cajas necesarias
+  await Hive.openBox<Income>('incomesBox');
+  await Hive.openBox<Expense>('expensesBox');
+  await Hive.openBox<Buy>('buysBox');
+
   runApp(
     MultiProvider(
       providers: [
