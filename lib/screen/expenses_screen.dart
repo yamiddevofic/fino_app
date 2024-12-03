@@ -5,8 +5,9 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 class ExpensesScreen extends StatefulWidget {
-  const ExpensesScreen({super.key, required this.colors});
-  final List<int> colors;
+  final Color color;
+  final Function(ThemeMode) cambiarTema;
+  const ExpensesScreen({super.key, required this.color, required this.cambiarTema});
 
   @override
   _ExpensesScreenState createState() => _ExpensesScreenState();
@@ -55,7 +56,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(widget.colors[2]),
+      backgroundColor: widget.color,
       body: Center(
         child: SingleChildScrollView(
           child: Padding(
@@ -111,7 +112,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           foregroundColor: Colors.white,
-                          backgroundColor: Colors.red,
+                          backgroundColor: Colors.green,
                         ),
                         onPressed: sendExpense,
                         child: const Text('Agregar Gasto'),
@@ -159,6 +160,43 @@ class ExpensesListScreen extends StatelessWidget {
               subtitle: Text(
                 'Monto: \$${numberFormat.format(expense.amount)}',
                 style: const TextStyle(fontSize: 18),
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: const Text('Eliminar Gasto'),
+                        content: const Text(
+                            '¿Estás seguro de que deseas eliminar este gasto?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: const Text('Cancelar'),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              Provider.of<ExpenseProvider>(context,
+                                      listen: false)
+                                  .deleteExpense(index);
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(const SnackBar(
+                                      backgroundColor: Colors.red,
+                                      content: Text(
+                                        'Gasto eliminado exitosamente',
+                                      )));
+                            },
+                            child: const Text('Eliminar'),
+                          ),
+                        ],
+                      );
+                    });
+                },
               ),
             ),
           );

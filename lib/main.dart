@@ -35,82 +35,181 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ExpenseProvider()),
         ChangeNotifierProvider(create: (_) => BuyProvider()),
       ],
-      child: fino_app(),
+      child: finoApp(),
     ),
   );
 }
 
-class fino_app extends StatelessWidget {
-  const fino_app({super.key});
+class finoApp extends StatefulWidget {
+  const finoApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  _FinoAppState createState() => _FinoAppState();
+}
+
+class _FinoAppState extends State<finoApp> with SingleTickerProviderStateMixin {
+  late TabController _tabController; // Controlador para el TabBar
+  Color backgroundColor = Color(0xFFADADAD);
+  late PageController _pageController;
+  ThemeMode _modoTema = ThemeMode.light;
+
+  bool get esOscuro => _modoTema == ThemeMode.dark;
+
+  final List<Color> colors = [
+    const Color(0xFFFFFFFF), // Verde
+    const Color(0xFF28A745), // Azul
+    const Color(0xFFFF5733), // Rojo
+    const Color.fromARGB(255, 237, 179, 4),
+  ];
+
+  final ThemeData temaClaro = ThemeData(
+    brightness: Brightness.light,
+    primaryColor: Colors.white,
+    hintColor: Colors.blue,
+    // Otros ajustes
+  );
+
+  final ThemeData temaOscuro = ThemeData(
+    brightness: Brightness.dark,
+    primaryColor: Colors.black,
+    hintColor: Colors.blueAccent,
+    // Otros ajustes
+  );
+
+
+  void _cambiarTema(ThemeMode modo) {
+    setState(() {
+      _modoTema = modo;
+    });
+  }
+
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+    _pageController = PageController(initialPage: _tabController.index);
+
+    // Asegura que el color de fondo esté sincronizado al iniciar la app
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateBackgroundColor(_tabController.index);
+    });
+
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        // Usa jumpToPage directamente para asegurar movimiento inmediato.
+        _pageController.jumpToPage(_tabController.index);
+        _updateBackgroundColor(_tabController.index);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _updateBackgroundColor(int index) {
+    setState(() {
+      backgroundColor = colors[index];
+    });
+  }
+
+
+
+  @override
+  Widget build(BuildContext contex) {
     return MaterialApp(
       title: 'Fino App',
-      home: const FinoApp(),
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      darkTheme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      fontFamily: 'Poppins',
-      ),
-    );
-  }
-}
-
-
-class FinoApp extends StatelessWidget {
-  const FinoApp({super.key});
-  
-  @override
-  Widget build(BuildContext context) {
-    final colors = [
-      0xFF009B17,
-      0xFF1D8BEC,
-      0xFFD40808,
-      0xFF0015FF,
-    ];
-    return DefaultTabController(
-      length: 4,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Fino App', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'Poppins', fontStyle: FontStyle.normal,color: Colors.white )),
-          backgroundColor: const Color.fromARGB(255, 79, 147, 248),
-          centerTitle: true,
-          bottom: const TabBar(
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white,
-            indicatorColor: Colors.white,
-            isScrollable: true,
-            indicatorSize: TabBarIndicatorSize.label,
-            indicator: BoxDecoration(
-              color: Color(0x38ffffff),
-              borderRadius: BorderRadius.all(Radius.circular(10)),
-              
+      home: DefaultTabController(
+        length: 4,
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('Fino App',
+                style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Poppins',
+                    fontStyle: FontStyle.normal,
+                    color: Color(0xFF28A745)
+                  ),
             ),
-            tabs: [
-              Tab(icon: Icon(Icons.home, color: Colors.white), text: 'Home'),
-              Tab(icon: Icon(Icons.input_outlined, color: Colors.white), text: 'Incomes'),
-              Tab(icon: Icon(Icons.output_outlined, color: Colors.white), text: 'Expenses'),
-              Tab(icon: Icon(Icons.shopping_bag, color: Colors.white), text: 'Buys'),
+            backgroundColor: Colors.white,
+            centerTitle: true,
+            bottom:  TabBar(
+              controller: _tabController,
+              labelColor: _tabController.index == 0 ? const Color(0xFF171717) : const Color(0xFFFFFFFF),
+              unselectedLabelColor: Color(0xFF161616),
+              isScrollable: true,
+              indicatorSize: TabBarIndicatorSize.label,
+              indicator: BoxDecoration(
+                color: _tabController.index == 0 ? const Color.fromARGB(255, 194, 200, 232) : backgroundColor,
+                borderRadius: BorderRadius.only(topLeft: Radius.circular(10), topRight: Radius.circular(10)),
+              ),
+              indicatorPadding: EdgeInsets.only(left: -4, right: -4),
+              tabs: [
+                Tab(
+                  icon: Icon(Icons.home, color: _tabController.index == 0 ? const Color(0xFF171717) : const Color(0xFF151515)),
+                  text: 'Home',
+                  iconMargin: const EdgeInsets.only(left: 10, right: 10),
+                  key: const ValueKey('home'),
+                ),
+                Tab(
+                  icon: Icon(Icons.input_outlined, color: _tabController.index == 1 ? Colors.white : const Color(0xFF151515)),
+                  text: 'Ingresos',
+                  key: const ValueKey('incomes'),
+                ),
+                Tab(
+                  icon: Icon(Icons.output_outlined, color: _tabController.index == 2 ? Colors.white : const Color(0xFF151515)),
+                  text: 'Gastos',
+                  key: ValueKey('expenses'),
+                ),
+                Tab(
+                  icon: Icon(Icons.shopping_bag, color: _tabController.index == 3 ? Colors.white : const Color(0xFF151515)),
+                  text: 'Compras',
+                  iconMargin: EdgeInsets.all(5),
+                  key: ValueKey('buys'),
+                ),
+              ],
+            ),
+            leading:
+                const Icon(Icons.menu, color: Color(0xFF1A1A1A)),
+            actions: [
+              Switch(
+              value: esOscuro,
+              onChanged: (bool valor) {
+                _cambiarTema(valor ? ThemeMode.dark : ThemeMode.light);
+              },
+              activeColor: Colors.white,
+              activeTrackColor: const Color(0xFF181818),
+              inactiveThumbColor: Colors.white,
+              inactiveTrackColor: Colors.grey,
+            ),
             ],
           ),
-          leading: const Icon(Icons.menu, color: Colors.white),
-        ),
-        body: TabBarView(
+          body: PageView(
+            controller: _pageController,
             children: [
-              HomeScreen(colors: colors),
-              IncomesScreen(colors: colors),
-              ExpensesScreen(colors: colors),
-              BuysScreen(colors: colors),
+              HomeScreen(color: colors[0], colors: colors, cambiarTema: _cambiarTema),
+              IncomesScreen(color: colors[1], cambiarTema: _cambiarTema),
+              ExpensesScreen(color: colors[2], cambiarTema: _cambiarTema),
+              BuysScreen(color: colors[3], cambiarTema: _cambiarTema),
             ],
+            onPageChanged: (index) {
+              _tabController.animateTo(index);
+              _updateBackgroundColor(index);
+            },
           ),
-      )
+
+        )),
+      debugShowCheckedModeBanner: false,
+      theme: temaClaro,
+      darkTheme: temaOscuro,
+      themeMode: _modoTema,
     );
   }
 }
+
 

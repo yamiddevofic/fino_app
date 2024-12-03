@@ -6,8 +6,10 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.colors});
-  final List<int> colors;
+  final Color color; 
+  final List<Color> colors;
+  final Function(ThemeMode) cambiarTema;
+  const HomeScreen({super.key, required this.color, required this.colors, required this.cambiarTema});
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -55,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
     double generalTotal = totalIncomes - (totalExpenses + totalBuys);
 
     return Scaffold(
-      backgroundColor: Color(widget.colors[1]),
+      backgroundColor: widget.color,
       body: Padding(
         padding: const EdgeInsets.only(top: 10, bottom: 10, left: 20, right: 20),
         child: SingleChildScrollView(
@@ -64,17 +66,17 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               AnimatedTargetTotals(
-                category: 'Incomes',
+                category: 'Ingresos',
                 amount: totalIncomes,
-                color: widget.colors[0],
+                color: widget.colors[1],
               ),
               AnimatedTargetTotals(
-                category: 'Expenses',
+                category: 'Egresos',
                 amount: totalExpenses,
                 color: widget.colors[2],
               ),
               AnimatedTargetTotals(
-                category: 'Buys',
+                category: 'Compras',
                 amount: totalBuys,
                 color: widget.colors[3],
               ),
@@ -87,12 +89,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     return Text(
                       'Total general: COP $generalTotalString',
                       style: const TextStyle(
+                        color: Color(0xFF0E0E0E),
                         fontSize: 18,
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.bold,
                       ),
                     );
                   },
+                  color: widget.color,
                 ),
               ),
             ],
@@ -104,15 +108,16 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class AnimatedTargetTotals extends StatelessWidget {
-  const AnimatedTargetTotals({
-    Key? key,
+  const AnimatedTargetTotals ({
+    super.key,
     required this.category,
     required this.color,
     required this.amount,
-  }) : super(key: key);
+    
+  });
 
   final String category;
-  final int color;
+  final Color color;
   final double amount;
 
   @override
@@ -122,6 +127,8 @@ class AnimatedTargetTotals extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.only(top: 20),
         child: Card(
+          color: Colors.white,
+          elevation: 8.0,
           child: Padding(
             padding: const EdgeInsets.only(top: 0, bottom: 10, left: 10, right: 10),
             child: Column(
@@ -159,10 +166,11 @@ class AnimatedTargetTotals extends StatelessWidget {
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'Poppins',
-                            color: Color(color),
+                            color: color,
                           ),
                         );
-                      },
+                      }, 
+                      color: color, 
                     ),
                   ],
                 ),
@@ -177,10 +185,11 @@ class AnimatedTargetTotals extends StatelessWidget {
 
 class AnimatedCounter extends StatefulWidget {
   const AnimatedCounter({
-    Key? key,
+    super.key,
     required this.value,
     required this.builder,
-  }) : super(key: key);
+    required color,
+  });
 
   final double value;
   final Widget Function(BuildContext, double) builder;

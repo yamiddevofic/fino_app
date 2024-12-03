@@ -5,14 +5,16 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 class IncomesScreen extends StatefulWidget {
-  const IncomesScreen({super.key, required this.colors});
-  final List<int> colors;
+  final Color color;
+  final Function(ThemeMode) cambiarTema;
+  const IncomesScreen({super.key, required this.color, required this.cambiarTema});
 
   @override
   State<IncomesScreen> createState() => _IncomesScreenState();
 }
 
 class _IncomesScreenState extends State<IncomesScreen> {
+  bool get esOscuro => Theme.of(context).brightness == Brightness.dark;
   final _formKey = GlobalKey<FormState>();
   String _incomeName = '';
   double _incomeAmount = 0.0;
@@ -30,7 +32,7 @@ class _IncomesScreenState extends State<IncomesScreen> {
       // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          backgroundColor: Colors.green,
+          backgroundColor: Colors.red,
           content: Text(
             'Ingreso agregado exitosamente',
             style: TextStyle(color: Colors.white, fontSize: 16),
@@ -58,7 +60,7 @@ class _IncomesScreenState extends State<IncomesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(widget.colors[1]),
+      backgroundColor: widget.color,
       body: Center(
         child: SingleChildScrollView(
           child: Padding(
@@ -142,7 +144,6 @@ class _IncomesScreenState extends State<IncomesScreen> {
   }
 }
 
-
 class IncomesListScreen extends StatelessWidget {
   const IncomesListScreen({super.key});
 
@@ -179,18 +180,38 @@ class IncomesListScreen extends StatelessWidget {
                     trailing: IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () {
-                        Provider.of<IncomeProvider>(context, listen: false)
-                            .deleteIncome(index);
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            backgroundColor: Colors.red,
-                            content: Text(
-                              'Ingreso eliminado',
-                              style: TextStyle(color: Colors.white, fontSize: 16),
-                            ),
-                          ),
-                        );
+                        showDialog(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                title: const Text('Eliminar Ingreso'),
+                                content: const Text(
+                                    '¿Estás seguro de que deseas eliminar este ingreso?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                    },
+                                    child: const Text('Cancelar'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      Provider.of<IncomeProvider>(context,
+                                              listen: false)
+                                          .deleteIncome(index);
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              backgroundColor: Colors.red,
+                                              content: Text(
+                                                'Ingreso eliminado exitosamente',
+                                              )));
+                                    },
+                                    child: const Text('Eliminar'),
+                                  ),
+                                ],
+                              );
+                            });
                       },
                     ),
                   ),

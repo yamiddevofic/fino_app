@@ -5,8 +5,9 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 class BuysScreen extends StatefulWidget {
-  const BuysScreen({super.key, required this.colors});
-  final List<int> colors;
+  final Color color;
+  final Function(ThemeMode) cambiarTema;
+  const BuysScreen({super.key, required this.color, required this.cambiarTema});
 
   @override
   _BuysScreenState createState() => _BuysScreenState();
@@ -27,7 +28,7 @@ class _BuysScreenState extends State<BuysScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          backgroundColor: Colors.purple,
+          backgroundColor: Colors.red,
           content: Text(
             'Compra agregada exitosamente',
             style: TextStyle(color: Colors.white, fontSize: 20),
@@ -55,7 +56,7 @@ class _BuysScreenState extends State<BuysScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(widget.colors[3]),
+      backgroundColor: widget.color,
       body: Center(
         child: SingleChildScrollView(
           child: Padding(
@@ -159,6 +160,43 @@ class BuysListScreen extends StatelessWidget {
               subtitle: Text(
                 'Monto: \$${numberFormat.format(buy.amount)}',
                 style: const TextStyle(fontSize: 18),
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: const Text('Eliminar Compra'),
+                        content: const Text(
+                            '¿Estás seguro de que deseas eliminar este compra?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: const Text('Cancelar'),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              Provider.of<BuyProvider>(context,
+                                      listen: false)
+                                  .deleteBuy(index);
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(const SnackBar(
+                                      backgroundColor: Colors.red,
+                                      content: Text(
+                                        'Compra eliminado exitosamente',
+                                      )));
+                            },
+                            child: const Text('Eliminar'),
+                          ),
+                        ],
+                      );
+                    });
+                },
               ),
             ),
           );
