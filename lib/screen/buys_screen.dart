@@ -7,8 +7,8 @@ import 'package:intl/intl.dart';
 class BuysScreen extends StatefulWidget {
   final Color color;
   final Function(ThemeMode) cambiarTema;
-  const BuysScreen({super.key, required this.color, required this.cambiarTema});
-
+  final ThemeMode modo;
+  const BuysScreen({super.key, required this.color, required this.cambiarTema, required this.modo});
   @override
   _BuysScreenState createState() => _BuysScreenState();
 }
@@ -56,77 +56,97 @@ class _BuysScreenState extends State<BuysScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: widget.color,
-      body: Center(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(30),
-            child: Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Agregar Compra',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins',
+      backgroundColor: widget.modo == ThemeMode.dark ? const Color(0xFF070707) : widget.color,
+      body: Container(
+        width: double.infinity,
+          height: double.infinity,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: widget.color,
+              width: 2.0,
+              style: BorderStyle.solid,
+              //color: widget.modo == ThemeMode.light ? Colors.white : widget.color,
+            ),
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(30),
+              child: Card(
+                elevation: 4,
+                color: widget.modo == ThemeMode.dark ? const Color(0xFF070707) : Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: BorderSide(
+                    color: widget.color,
+                    width: 2.0,
+                    style: BorderStyle.solid,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Agregar Compra',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Poppins',
+                          ),
                         ),
-                      ),
-                      TextFormField(
-                        decoration: const InputDecoration(labelText: 'Nombre'),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Por favor, ingrese un nombre';
-                          }
-                          return null;
-                        },
-                        onSaved: (value) {
-                          _buyName = value!;
-                        },
-                      ),
-                      TextFormField(
-                        decoration: const InputDecoration(labelText: 'Monto'),
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null ||
-                              value.isEmpty ||
-                              double.tryParse(value) == null ||
-                              double.parse(value) <= 0) {
-                            return 'Por favor, ingrese un monto válido';
-                          }
-                          return null;
-                        },
-                        onSaved: (value) {
-                          _buyAmount = double.parse(value!);
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: const Color(0xFF6BC714),
+                        TextFormField(
+                          decoration: const InputDecoration(labelText: 'Nombre'),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor, ingrese un nombre';
+                            }
+                            return null;
+                          },
+                          onSaved: (value) {
+                            _buyName = value!;
+                          },
                         ),
-                        onPressed: sendBuy,
-                        child: const Text('Agregar Compra'),
-                      ),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.blue,
+                        TextFormField(
+                          decoration: const InputDecoration(labelText: 'Monto'),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value == null ||
+                                value.isEmpty ||
+                                double.tryParse(value) == null ||
+                                double.parse(value) <= 0) {
+                              return 'Por favor, ingrese un monto válido';
+                            }
+                            return null;
+                          },
+                          onSaved: (value) {
+                            _buyAmount = double.parse(value!);
+                          },
                         ),
-                        onPressed: viewBuys,
-                        child: const Text('Ver Compras'),
-                      ),
-                    ],
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: const Color(0xFF6BC714),
+                          ),
+                          onPressed: sendBuy,
+                          child: const Text('Agregar Compra'),
+                        ),
+                        const SizedBox(height: 10),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.blue,
+                          ),
+                          onPressed: viewBuys,
+                          child: const Text('Ver Compras'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

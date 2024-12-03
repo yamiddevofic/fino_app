@@ -9,7 +9,8 @@ class HomeScreen extends StatefulWidget {
   final Color color; 
   final List<Color> colors;
   final Function(ThemeMode) cambiarTema;
-  const HomeScreen({super.key, required this.color, required this.colors, required this.cambiarTema});
+  final ThemeMode modo;
+  const HomeScreen({super.key, required this.color, required this.colors, required this.cambiarTema, required this.modo});
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -57,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
     double generalTotal = totalIncomes - (totalExpenses + totalBuys);
 
     return Scaffold(
-      backgroundColor: widget.color,
+      backgroundColor: widget.modo == ThemeMode.dark ? const Color(0xFF070707) : widget.color,
       body: Padding(
         padding: const EdgeInsets.only(top: 10, bottom: 10, left: 20, right: 20),
         child: SingleChildScrollView(
@@ -68,17 +69,21 @@ class _HomeScreenState extends State<HomeScreen> {
               AnimatedTargetTotals(
                 category: 'Ingresos',
                 amount: totalIncomes,
+                //color de acuerdo al modo
                 color: widget.colors[1],
+                modo: widget.modo,
               ),
               AnimatedTargetTotals(
                 category: 'Egresos',
                 amount: totalExpenses,
                 color: widget.colors[2],
+                modo: widget.modo,
               ),
               AnimatedTargetTotals(
                 category: 'Compras',
                 amount: totalBuys,
                 color: widget.colors[3],
+                modo: widget.modo,
               ),
               Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -88,8 +93,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     final generalTotalString = numberFormat.format(value);
                     return Text(
                       'Total general: COP $generalTotalString',
-                      style: const TextStyle(
-                        color: Color(0xFF0E0E0E),
+                      style: TextStyle(
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                         fontSize: 18,
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.bold,
@@ -113,12 +118,13 @@ class AnimatedTargetTotals extends StatelessWidget {
     required this.category,
     required this.color,
     required this.amount,
-    
+    required this.modo,
   });
 
   final String category;
   final Color color;
   final double amount;
+  final ThemeMode modo;
 
   @override
   Widget build(BuildContext context) {
@@ -127,7 +133,14 @@ class AnimatedTargetTotals extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.only(top: 20),
         child: Card(
-          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+            side: BorderSide(
+              color: modo == ThemeMode.light ? Colors.white : color,
+              width: 2.0,
+            ),
+          ),
+          color: Theme.of(context).cardColor,
           elevation: 8.0,
           child: Padding(
             padding: const EdgeInsets.only(top: 0, bottom: 10, left: 10, right: 10),

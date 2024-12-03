@@ -7,8 +7,8 @@ import 'package:provider/provider.dart';
 class IncomesScreen extends StatefulWidget {
   final Color color;
   final Function(ThemeMode) cambiarTema;
-  const IncomesScreen({super.key, required this.color, required this.cambiarTema});
-
+  final ThemeMode modo;
+  const IncomesScreen({super.key, required this.color, required this.cambiarTema, required this.modo});  
   @override
   State<IncomesScreen> createState() => _IncomesScreenState();
 }
@@ -60,79 +60,100 @@ class _IncomesScreenState extends State<IncomesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: widget.color,
+      backgroundColor: widget.modo == ThemeMode.dark ? const Color(0xFF070707) : widget.color,
       body: Center(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(30.0),
-            child: Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Agregar Ingreso',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins',
+        //dar bordes que ocupe toda la screen
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: widget.color,
+              width: 2.0,
+              style: BorderStyle.solid,
+              //color: widget.modo == ThemeMode.light ? Colors.white : widget.color,
+            ),
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(30.0),
+              child: Card(
+                elevation: 4,
+                color: widget.modo == ThemeMode.dark ? const Color(0xFF070707) : Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: BorderSide(
+                    color: widget.color,
+                    width: 2.0,
+                    style: BorderStyle.solid,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Agregar Ingreso',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Poppins',
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      TextFormField(
-                        decoration: const InputDecoration(labelText: 'Nombre'),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Por favor, ingrese un nombre';
-                          }
-                          return null;
-                        },
-                        onSaved: (value) {
-                          _incomeName = value!.trim();
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      TextFormField(
-                        decoration: const InputDecoration(labelText: 'Monto'),
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null ||
-                              double.tryParse(value) == null ||
-                              double.parse(value) <= 0) {
-                            return 'Por favor, ingrese un monto válido';
-                          }
-                          return null;
-                        },
-                        onSaved: (value) {
-                          _incomeAmount = double.parse(value!);
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.green,
+                        const SizedBox(height: 20),
+                        TextFormField(
+                          decoration: const InputDecoration(labelText: 'Nombre'),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Por favor, ingrese un nombre';
+                            }
+                            return null;
+                          },
+                          onSaved: (value) {
+                            _incomeName = value!.trim();
+                          },
                         ),
-                        onPressed: _addIncome,
-                        child: const Text('Agregar Ingreso'),
-                      ),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.blue,
+                        const SizedBox(height: 10),
+                        TextFormField(
+                          decoration: const InputDecoration(labelText: 'Monto'),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value == null ||
+                                double.tryParse(value) == null ||
+                                double.parse(value) <= 0) {
+                              return 'Por favor, ingrese un monto válido';
+                            }
+                            return null;
+                          },
+                          onSaved: (value) {
+                            _incomeAmount = double.parse(value!);
+                          },
                         ),
-                        onPressed: _navigateToList,
-                        child: const Text('Ver Ingresos'),
-                      ),
-                    ],
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.green,
+                          ),
+                          onPressed: _addIncome,
+                          child: const Text('Agregar Ingreso'),
+                        ),
+                        const SizedBox(height: 10),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.blue,
+                          ),
+                          onPressed: _navigateToList,
+                          child: const Text('Ver Ingresos'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

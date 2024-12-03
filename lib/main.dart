@@ -54,32 +54,71 @@ class _FinoAppState extends State<finoApp> with SingleTickerProviderStateMixin {
   ThemeMode _modoTema = ThemeMode.light;
 
   bool get esOscuro => _modoTema == ThemeMode.dark;
+  List<Color> get currentColors => esOscuro ? colorsDark : colorsLight;
 
-  final List<Color> colors = [
-    const Color(0xFFFFFFFF), // Verde
-    const Color(0xFF28A745), // Azul
-    const Color(0xFFFF5733), // Rojo
-    const Color.fromARGB(255, 237, 179, 4),
-  ];
+
+  // Colores para el modo claro
+final List<Color> colorsLight = [
+  const Color(0xFF3A93CF), // HomeScreen
+  const Color(0xFF28A745), // IncomesScreen
+  const Color(0xFFFF5733), // ExpensesScreen
+  const Color(0xFF2C60DB)
+];
+
+// Colores para el modo oscuro
+final List<Color> colorsDark = [
+  const Color(0xFF070707), // HomeScreen
+  const Color(0xFF86FF05), // IncomesScreen
+  const Color.fromARGB(255, 255, 217, 0), // ExpensesScreen
+  const Color.fromARGB(255, 0, 234, 255), // BuysScreen
+];
+
 
   final ThemeData temaClaro = ThemeData(
     brightness: Brightness.light,
     primaryColor: Colors.white,
     hintColor: Colors.blue,
-    // Otros ajustes
+    appBarTheme: AppBarTheme(
+      backgroundColor: Colors.white,
+    ),
+    tabBarTheme: TabBarTheme(
+      labelColor: Color(0xFFFFFEFE),
+      unselectedLabelColor: Color(0xFF161616)
+    ),
+    iconTheme: IconThemeData(
+      color: Colors.black,
+    ),
+    cardColor: Colors.white,
+    textTheme:  TextTheme(
+      bodyLarge: TextStyle(color: const Color(0xFFF1F1F1)),
+    )
   );
 
   final ThemeData temaOscuro = ThemeData(
     brightness: Brightness.dark,
     primaryColor: Colors.black,
     hintColor: Colors.blueAccent,
-    // Otros ajustes
+    appBarTheme: AppBarTheme(
+      backgroundColor: Colors.black,
+    ),
+    tabBarTheme: TabBarTheme(
+      labelColor: const Color(0xFF000000),
+      unselectedLabelColor: Colors.white
+    ),
+    iconTheme: IconThemeData(
+      color: const Color(0xFF000000),
+    ),
+    cardColor: Color(0xFF070707),
+    textTheme:  TextTheme(
+      bodyLarge: TextStyle(color: Colors.white),
+    )
   );
 
 
   void _cambiarTema(ThemeMode modo) {
     setState(() {
       _modoTema = modo;
+      backgroundColor = currentColors[_tabController.index];
     });
   }
 
@@ -113,97 +152,116 @@ class _FinoAppState extends State<finoApp> with SingleTickerProviderStateMixin {
 
   void _updateBackgroundColor(int index) {
     setState(() {
-      backgroundColor = colors[index];
+      backgroundColor = currentColors[index];
     });
   }
-
 
 
   @override
   Widget build(BuildContext contex) {
     return MaterialApp(
       title: 'Fino App',
-      home: DefaultTabController(
-        length: 4,
-        child: Scaffold(
-          appBar: AppBar(
-            title: const Text('Fino App',
-                style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins',
-                    fontStyle: FontStyle.normal,
-                    color: Color(0xFF28A745)
+      home: Builder(
+        builder: (context) => DefaultTabController(
+            length: 4,
+            child: Scaffold(
+              appBar: AppBar(
+                title: const Text('Fino App',
+                    style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins',
+                        fontStyle: FontStyle.normal,
+                        color: Color(0xFF28A745)
+                      ),
+                ),
+                backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+                centerTitle: true,
+                bottom:  TabBar(
+                  controller: _tabController,
+                  labelColor: Theme.of(context).tabBarTheme.labelColor,
+                  unselectedLabelColor: Theme.of(context).tabBarTheme.unselectedLabelColor,
+                  isScrollable: true,
+                  indicatorSize: TabBarIndicatorSize.label,
+                  indicator: BoxDecoration(
+                    color:  _tabController.index == 0 && esOscuro ? Colors.white : backgroundColor,
+                    borderRadius: BorderRadius.only(topLeft: Radius.circular(10), topRight: Radius.circular(10)),
                   ),
-            ),
-            backgroundColor: Colors.white,
-            centerTitle: true,
-            bottom:  TabBar(
-              controller: _tabController,
-              labelColor: _tabController.index == 0 ? const Color(0xFF171717) : const Color(0xFFFFFFFF),
-              unselectedLabelColor: Color(0xFF161616),
-              isScrollable: true,
-              indicatorSize: TabBarIndicatorSize.label,
-              indicator: BoxDecoration(
-                color: _tabController.index == 0 ? const Color.fromARGB(255, 194, 200, 232) : backgroundColor,
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(10), topRight: Radius.circular(10)),
+                  indicatorPadding: EdgeInsets.only(left: -4, right: -4),
+                  tabs: [
+                    Tab(
+                      icon: Icon(
+                        Icons.home,
+                        color: _tabController.index == 0
+                            ? (esOscuro ? const Color.fromARGB(255, 0, 0, 0) : const Color.fromARGB(255, 255, 255, 255))
+                            : (esOscuro ? const Color(0xFFBDBDBD) : const Color(0xFF7E7E7E)),
+                      ),
+                      text: 'Home',
+                      iconMargin: const EdgeInsets.only(left: 10, right: 10),
+                      key: const ValueKey('home'),
+                    ),
+                    Tab(
+                      icon: Icon(
+                        Icons.input_outlined,
+                        color: _tabController.index == 1
+                            ? (esOscuro ? const Color(0xFF000000) : const Color(0xFFFFFFFF))
+                            : (esOscuro ? const Color(0xFFF0F0F0) : const Color(0xFF7E7E7E)),
+                      ),
+                      text: 'Ingresos',
+                      key: const ValueKey('incomes'),
+                    ),
+                    Tab(
+                      icon: Icon(
+                        Icons.output_outlined,
+                        color: _tabController.index == 2
+                            ? (esOscuro ? const Color.fromARGB(255, 0, 0, 0) : const Color.fromARGB(255, 255, 255, 255))
+                            : (esOscuro ? const Color(0xFFBDBDBD) : const Color(0xFF7E7E7E)),
+                      ),
+                      text: 'Gastos',
+                      key: ValueKey('expenses'),
+                    ),
+                    Tab(
+                      icon: Icon(
+                        Icons.shopping_cart_outlined,
+                        color: _tabController.index == 3
+                            ? (esOscuro ? const Color.fromARGB(255, 0, 0, 0) : const Color.fromARGB(255, 255, 255, 255))
+                            : (esOscuro ? const Color(0xFFBDBDBD) : const Color(0xFF7E7E7E)),
+                      ),
+                      text: 'Compras',
+                      iconMargin: EdgeInsets.all(5),
+                      key: ValueKey('buys'),
+                    ),
+                  ],
+                ),
+                actions: [
+                  Switch(
+                  value: esOscuro,
+                  onChanged: (bool valor) {
+                    _cambiarTema(valor ? ThemeMode.dark : ThemeMode.light);
+                  },
+                  activeColor: Colors.white,
+                  activeTrackColor: const Color(0xFF181818),
+                  inactiveThumbColor: Colors.white,
+                  inactiveTrackColor: Colors.grey,
+                ),
+                ],
               ),
-              indicatorPadding: EdgeInsets.only(left: -4, right: -4),
-              tabs: [
-                Tab(
-                  icon: Icon(Icons.home, color: _tabController.index == 0 ? const Color(0xFF171717) : const Color(0xFF151515)),
-                  text: 'Home',
-                  iconMargin: const EdgeInsets.only(left: 10, right: 10),
-                  key: const ValueKey('home'),
-                ),
-                Tab(
-                  icon: Icon(Icons.input_outlined, color: _tabController.index == 1 ? Colors.white : const Color(0xFF151515)),
-                  text: 'Ingresos',
-                  key: const ValueKey('incomes'),
-                ),
-                Tab(
-                  icon: Icon(Icons.output_outlined, color: _tabController.index == 2 ? Colors.white : const Color(0xFF151515)),
-                  text: 'Gastos',
-                  key: ValueKey('expenses'),
-                ),
-                Tab(
-                  icon: Icon(Icons.shopping_bag, color: _tabController.index == 3 ? Colors.white : const Color(0xFF151515)),
-                  text: 'Compras',
-                  iconMargin: EdgeInsets.all(5),
-                  key: ValueKey('buys'),
-                ),
-              ],
-            ),
-            leading:
-                const Icon(Icons.menu, color: Color(0xFF1A1A1A)),
-            actions: [
-              Switch(
-              value: esOscuro,
-              onChanged: (bool valor) {
-                _cambiarTema(valor ? ThemeMode.dark : ThemeMode.light);
-              },
-              activeColor: Colors.white,
-              activeTrackColor: const Color(0xFF181818),
-              inactiveThumbColor: Colors.white,
-              inactiveTrackColor: Colors.grey,
-            ),
-            ],
-          ),
-          body: PageView(
-            controller: _pageController,
-            children: [
-              HomeScreen(color: colors[0], colors: colors, cambiarTema: _cambiarTema),
-              IncomesScreen(color: colors[1], cambiarTema: _cambiarTema),
-              ExpensesScreen(color: colors[2], cambiarTema: _cambiarTema),
-              BuysScreen(color: colors[3], cambiarTema: _cambiarTema),
-            ],
-            onPageChanged: (index) {
-              _tabController.animateTo(index);
-              _updateBackgroundColor(index);
-            },
-          ),
-
-        )),
+              body: PageView(
+                controller: _pageController,
+                children: [
+                  HomeScreen(color: currentColors[0], colors: currentColors, cambiarTema: _cambiarTema, modo: _modoTema),
+                  IncomesScreen(color: currentColors[1], cambiarTema: _cambiarTema, modo: _modoTema),
+                  ExpensesScreen(color: currentColors[2], cambiarTema: _cambiarTema, modo: _modoTema),
+                  BuysScreen(color: currentColors[3], cambiarTema: _cambiarTema, modo: _modoTema),
+                ],
+                onPageChanged: (index) {
+                  _tabController.animateTo(index);
+                  _updateBackgroundColor(index);
+                },
+              ),
+          
+            ))
+      ),
       debugShowCheckedModeBanner: false,
       theme: temaClaro,
       darkTheme: temaOscuro,

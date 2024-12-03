@@ -7,7 +7,8 @@ import 'package:intl/intl.dart';
 class ExpensesScreen extends StatefulWidget {
   final Color color;
   final Function(ThemeMode) cambiarTema;
-  const ExpensesScreen({super.key, required this.color, required this.cambiarTema});
+  final ThemeMode modo;
+  const ExpensesScreen({super.key, required this.color, required this.cambiarTema, required this.modo});  
 
   @override
   _ExpensesScreenState createState() => _ExpensesScreenState();
@@ -56,77 +57,97 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: widget.color,
-      body: Center(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(30),
-            child: Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Agregar Gasto',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins',
+      backgroundColor: widget.modo == ThemeMode.dark ? const Color(0xFF070707) : widget.color,
+      body: Container(
+        width: double.infinity,
+          height: double.infinity,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: widget.color,
+              width: 2.0,
+              style: BorderStyle.solid,
+              //color: widget.modo == ThemeMode.light ? Colors.white : widget.color,
+            ),
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(30),
+              child: Card(
+                elevation: 4,
+                color: widget.modo == ThemeMode.dark ? const Color(0xFF070707) : Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: BorderSide(
+                    color: widget.color,
+                    width: 2.0,
+                    style: BorderStyle.solid,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Agregar Gasto',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Poppins',
+                          ),
                         ),
-                      ),
-                      TextFormField(
-                        decoration: const InputDecoration(labelText: 'Nombre'),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Por favor, ingrese un nombre';
-                          }
-                          return null;
-                        },
-                        onSaved: (value) {
-                          _expenseName = value!;
-                        },
-                      ),
-                      TextFormField(
-                        decoration: const InputDecoration(labelText: 'Monto'),
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null ||
-                              value.isEmpty ||
-                              double.tryParse(value) == null ||
-                              double.parse(value) <= 0) {
-                            return 'Por favor, ingrese un monto válido';
-                          }
-                          return null;
-                        },
-                        onSaved: (value) {
-                          _expenseAmount = double.parse(value!);
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.green,
+                        TextFormField(
+                          decoration: const InputDecoration(labelText: 'Nombre'),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor, ingrese un nombre';
+                            }
+                            return null;
+                          },
+                          onSaved: (value) {
+                            _expenseName = value!;
+                          },
                         ),
-                        onPressed: sendExpense,
-                        child: const Text('Agregar Gasto'),
-                      ),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.blue,
+                        TextFormField(
+                          decoration: const InputDecoration(labelText: 'Monto'),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value == null ||
+                                value.isEmpty ||
+                                double.tryParse(value) == null ||
+                                double.parse(value) <= 0) {
+                              return 'Por favor, ingrese un monto válido';
+                            }
+                            return null;
+                          },
+                          onSaved: (value) {
+                            _expenseAmount = double.parse(value!);
+                          },
                         ),
-                        onPressed: viewExpenses,
-                        child: const Text('Ver Gastos'),
-                      ),
-                    ],
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.green,
+                          ),
+                          onPressed: sendExpense,
+                          child: const Text('Agregar Gasto'),
+                        ),
+                        const SizedBox(height: 10),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.blue,
+                          ),
+                          onPressed: viewExpenses,
+                          child: const Text('Ver Gastos'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
