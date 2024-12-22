@@ -6,9 +6,9 @@ import 'package:intl/intl.dart';
 
 class BuysScreen extends StatefulWidget {
   final Color color;
-  final Function(ThemeMode) cambiarTema;
+  final Function(ThemeMode) changeTheme;
   final ThemeMode modo;
-  const BuysScreen({super.key, required this.color, required this.cambiarTema, required this.modo});
+  const BuysScreen({super.key, required this.color, required this.changeTheme, required this.modo});
   @override
   _BuysScreenState createState() => _BuysScreenState();
 }
@@ -62,14 +62,14 @@ class _BuysScreenState extends State<BuysScreen> {
           height: double.infinity,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            border: Border.all(
+          border: Border(
+            top: BorderSide(
               color: widget.color,
-              width: 2.0,
+              width: 8.0,
               style: BorderStyle.solid,
-              //color: widget.modo == ThemeMode.light ? Colors.white : widget.color,
             ),
-            borderRadius: BorderRadius.circular(10.0),
           ),
+        ),
         child: Center(
           child: SingleChildScrollView(
             child: Padding(

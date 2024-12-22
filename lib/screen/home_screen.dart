@@ -1,16 +1,22 @@
 import 'package:fino_app/provider/buy_provider.dart';
 import 'package:fino_app/provider/expenses_provider.dart';
 import 'package:fino_app/provider/incomes_provider.dart';
+import 'package:fino_app/provider/debts_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
-  final Color color; 
+  final Color color;
   final List<Color> colors;
-  final Function(ThemeMode) cambiarTema;
+  final Function(ThemeMode) changeTheme;
   final ThemeMode modo;
-  const HomeScreen({super.key, required this.color, required this.colors, required this.cambiarTema, required this.modo});
+  const HomeScreen(
+      {super.key,
+      required this.color,
+      required this.colors,
+      required this.changeTheme,
+      required this.modo});
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -38,6 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final expenseProvider = Provider.of<ExpenseProvider>(context);
     final incomeProvider = Provider.of<IncomeProvider>(context);
     final buyProvider = Provider.of<BuyProvider>(context);
+    final debtProvider = Provider.of<DebtProvider>(context);
     final numberFormat = NumberFormat('#,##0.00', 'es_CO');
 
     double totalExpenses = expenseProvider.expenses.fold(
@@ -50,17 +57,25 @@ class _HomeScreenState extends State<HomeScreen> {
       (sum, item) => sum + item.amount,
     );
 
+    double totalDebts = debtProvider.debts.fold(
+      0.0,
+      (sum, item) => sum + item.amount,
+    );
+
     double totalBuys = buyProvider.buys.fold(
       0.0,
       (sum, item) => sum + item.amount,
     );
 
-    double generalTotal = totalIncomes - (totalExpenses + totalBuys);
+    double generalTotal = totalIncomes - (totalExpenses + totalDebts);
 
     return Scaffold(
-      backgroundColor: widget.modo == ThemeMode.dark ? const Color(0xFF070707) : widget.color,
+      backgroundColor: widget.modo == ThemeMode.dark
+          ? const Color(0xFF070707)
+          : widget.color,
       body: Padding(
-        padding: const EdgeInsets.only(top: 10, bottom: 10, left: 20, right: 20),
+        padding:
+            const EdgeInsets.only(top: 10, bottom: 10, left: 20, right: 20),
         child: SingleChildScrollView(
           controller: _scrollController,
           child: Column(
@@ -74,14 +89,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 modo: widget.modo,
               ),
               AnimatedTargetTotals(
-                category: 'Egresos',
+                category: 'Gastos',
                 amount: totalExpenses,
                 color: widget.colors[2],
                 modo: widget.modo,
               ),
               AnimatedTargetTotals(
-                category: 'Compras',
-                amount: totalBuys,
+                category: 'Deudas',
+                amount: totalDebts,
                 color: widget.colors[3],
                 modo: widget.modo,
               ),
@@ -94,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     return Text(
                       'Total general: COP $generalTotalString',
                       style: TextStyle(
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                        color: Colors.white,
                         fontSize: 18,
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.bold,
@@ -113,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class AnimatedTargetTotals extends StatelessWidget {
-  const AnimatedTargetTotals ({
+  const AnimatedTargetTotals({
     super.key,
     required this.category,
     required this.color,
@@ -143,7 +158,8 @@ class AnimatedTargetTotals extends StatelessWidget {
           color: Theme.of(context).cardColor,
           elevation: 8.0,
           child: Padding(
-            padding: const EdgeInsets.only(top: 0, bottom: 10, left: 10, right: 10),
+            padding:
+                const EdgeInsets.only(top: 0, bottom: 10, left: 10, right: 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -182,8 +198,8 @@ class AnimatedTargetTotals extends StatelessWidget {
                             color: color,
                           ),
                         );
-                      }, 
-                      color: color, 
+                      },
+                      color: color,
                     ),
                   ],
                 ),
@@ -211,7 +227,8 @@ class AnimatedCounter extends StatefulWidget {
   _AnimatedCounterState createState() => _AnimatedCounterState();
 }
 
-class _AnimatedCounterState extends State<AnimatedCounter> with SingleTickerProviderStateMixin {
+class _AnimatedCounterState extends State<AnimatedCounter>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -228,7 +245,8 @@ class _AnimatedCounterState extends State<AnimatedCounter> with SingleTickerProv
     ).animate(CurvedAnimation(
       parent: _controller,
       curve: Curves.easeOut,
-    ))..addListener(() {
+    ))
+      ..addListener(() {
         setState(() {});
       });
     _controller.forward();

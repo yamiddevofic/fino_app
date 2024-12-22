@@ -6,9 +6,9 @@ import 'package:intl/intl.dart';
 
 class ExpensesScreen extends StatefulWidget {
   final Color color;
-  final Function(ThemeMode) cambiarTema;
+  final Function(ThemeMode) changeTheme;
   final ThemeMode modo;
-  const ExpensesScreen({super.key, required this.color, required this.cambiarTema, required this.modo});  
+  const ExpensesScreen({super.key, required this.color, required this.changeTheme, required this.modo});  
 
   @override
   _ExpensesScreenState createState() => _ExpensesScreenState();
@@ -63,14 +63,14 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           height: double.infinity,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            border: Border.all(
+          border: Border(
+            top: BorderSide(
               color: widget.color,
-              width: 2.0,
+              width: 8.0,
               style: BorderStyle.solid,
-              //color: widget.modo == ThemeMode.light ? Colors.white : widget.color,
             ),
-            borderRadius: BorderRadius.circular(10.0),
           ),
+        ),
         child: Center(
           child: SingleChildScrollView(
             child: Padding(
@@ -101,7 +101,10 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           ),
                         ),
                         TextFormField(
-                          decoration: const InputDecoration(labelText: 'Nombre'),
+                          // colocar color de texto en el labelText
+                          decoration: const InputDecoration(labelText: 'Nombre'
+                          ,),
+
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Por favor, ingrese un nombre';

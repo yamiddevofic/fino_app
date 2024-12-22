@@ -6,9 +6,9 @@ import 'package:provider/provider.dart';
 
 class IncomesScreen extends StatefulWidget {
   final Color color;
-  final Function(ThemeMode) cambiarTema;
+  final Function(ThemeMode) changeTheme;
   final ThemeMode modo;
-  const IncomesScreen({super.key, required this.color, required this.cambiarTema, required this.modo});  
+  const IncomesScreen({super.key, required this.color, required this.changeTheme, required this.modo});  
   @override
   State<IncomesScreen> createState() => _IncomesScreenState();
 }
@@ -68,13 +68,13 @@ class _IncomesScreenState extends State<IncomesScreen> {
           height: double.infinity,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            border: Border.all(
-              color: widget.color,
-              width: 2.0,
-              style: BorderStyle.solid,
-              //color: widget.modo == ThemeMode.light ? Colors.white : widget.color,
+            border: Border(
+              top: BorderSide(
+                color: widget.color,
+                width: 8.0,
+                style: BorderStyle.solid,
+              ),
             ),
-            borderRadius: BorderRadius.circular(10.0),
           ),
           child: SingleChildScrollView(
             child: Padding(
