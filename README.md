@@ -1,6 +1,6 @@
 # FINO - Tu Asistente para Listas de Compras
 
-**FINO** es una aplicación multiplitforma desarrollada con Flutter que facilita la creación y gestión de listas de compras, ayudándote a organizar tus compras de manera eficiente y asegurando que no olvides ningún artículo importante.
+**FINO** es una aplicación multiplataforma desarrollada con Flutter que facilita la creación y gestión de listas de compras, ayudándote a organizar tus compras de manera eficiente y asegurando que no olvides ningún artículo importante.
 
 ## Características Principales
 
@@ -22,3 +22,44 @@ Para probar **FINO** en tu dispositivo localmente, sigue estos pasos:
 
    ```bash
    git clone https://github.com/yamiddevofic/fino_app.git
+   ```
+
+2. **Navegar al directorio del proyecto**:
+
+   ```bash
+   cd fino_app
+   ```
+
+3. **Instalar las dependencias**:
+
+   ```bash
+   flutter pub get
+   ```
+
+4. **Ejecutar la aplicación**:
+
+   ```bash
+   flutter run
+   ```
+
+**Nota**: Asegúrate de tener Flutter instalado en tu sistema y un dispositivo o emulador configurado para ejecutar la aplicación.
+
+## Contribuciones
+
+¡Las contribuciones son bienvenidas! Si deseas colaborar en el desarrollo de FINO, por favor sigue estos pasos:
+
+1. Haz fork del repositorio.
+2. Crea una nueva rama con una descripción clara de la funcionalidad o corrección que implementarás.
+3. Realiza tus cambios y asegúrate de que las pruebas existentes pasen correctamente.
+4. Envía un Pull Request detallando los cambios realizados.
+
+## Licencia
+
+Este proyecto está bajo la licencia MIT. Consulta el archivo LICENSE para más detalles.
+
+## Contacto
+
+Para más información o consultas, puedes contactarme a través de:
+
+- Correo Electrónico: contacto@yamid.dev
+- LinkedIn: [Yamid Horacio Rodríguez](https://www.linkedin.com/in/yamid-rodriguez)
