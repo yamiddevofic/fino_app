@@ -1,24 +1,22 @@
-# FINO - Aplicación de Finanzas Personales
+# FINO - Tu Asistente para Listas de Compras
 
-**FINO** es una aplicación multiplataforma desarrollada con Flutter que permite a los usuarios gestionar sus finanzas personales de manera sencilla y eficiente. Actualmente, la aplicación ofrece funcionalidades básicas para el registro y seguimiento de ingresos, egresos, deudas y compras, proporcionando una visión clara del estado financiero del usuario.
+**FINO** es una aplicación multiplitforma desarrollada con Flutter que facilita la creación y gestión de listas de compras, ayudándote a organizar tus compras de manera eficiente y asegurando que no olvides ningún artículo importante.
 
 ## Características Principales
 
-- **Registro de Ingresos y Egresos**: Añade y categoriza tus fuentes de ingresos y gastos para un seguimiento detallado.
-- **Gestión de Deudas y Compras**: Lleva un control preciso de tus deudas pendientes y compras realizadas.
-- **Visualización de Totales**: Consulta los totales acumulados de ingresos, egresos y deudas, así como un resumen general de tu situación financiera.
+- **Creación de Listas de Compras**: Añade productos a tus listas de manera rápida y sencilla, permitiendo una planificación efectiva de tus compras.
+- **Gestión de Categorías**: Organiza los artículos por categorías para facilitar la navegación y el proceso de compra en la tienda.
+- **Sincronización en Tiempo Real**: Comparte tus listas con familiares o amigos y manténlas actualizadas en todos los dispositivos.
+- **Historial de Compras**: Accede a un registro de tus compras anteriores para agilizar la creación de nuevas listas.
+- **Notificaciones y Recordatorios**: Recibe alertas para no olvidar realizar tus compras o añadir artículos pendientes.
 
 ## Capturas de Pantalla
 
-![Pantalla Principal](ruta/a/imagen_pantalla_principal.png)
-*Descripción breve de la pantalla principal.*
-
-![Registro de Ingresos](ruta/a/imagen_registro_ingresos.png)
-*Descripción breve de la pantalla de registro de ingresos.*
+*Incluye aquí imágenes representativas de la interfaz de la aplicación para ofrecer a los usuarios una vista previa visual.*
 
 ## Instalación
 
-Para ejecutar **FINO** localmente, sigue estos pasos:
+Para probar **FINO** en tu dispositivo localmente, sigue estos pasos:
 
 1. **Clonar el repositorio**:
 
