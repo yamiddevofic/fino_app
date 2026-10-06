@@ -2,7 +2,7 @@ import 'package:fino_app/models/finance_record.dart';
 
 part 'debts_model.g.dart';
 
-/// Un deuda registrado por el usuario.
+/// Una deuda registrada por el usuario.
 class Debt extends FinanceRecord {
   Debt({
     required super.name,
@@ -10,5 +10,7 @@ class Debt extends FinanceRecord {
     super.date,
     super.category,
     super.note,
+    super.done,
+    super.pricePending,
   });
 }

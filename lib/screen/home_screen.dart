@@ -50,8 +50,8 @@ class HomeScreen extends StatelessWidget {
     final breakdown = [
       (RecordKind.income, incomes.total, null),
       (RecordKind.expense, expenses.total, null),
-      (RecordKind.debt, debts.total, null),
-      (RecordKind.buy, buys.total, 'No se resta del balance'),
+      (RecordKind.debt, debts.total, _debtNote(debts)),
+      (RecordKind.buy, buys.total, _buyNote(buys)),
     ];
     final maxBreakdown = breakdown.fold<double>(
       0,
@@ -206,6 +206,23 @@ class HomeScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  /// Las deudas canceladas siguen restando del balance (ese dinero ya
+  /// salió); la nota muestra cuánto falta por pagar.
+  static String? _debtNote(RecordProvider<Debt> debts) {
+    if (debts.records.isEmpty) return null;
+    if (debts.pending.isEmpty) return 'Todas canceladas';
+    return 'Por pagar: ${formatCop(debts.pendingTotal)}';
+  }
+
+  static String _buyNote(RecordProvider<Buy> buys) {
+    final noPrice = buys.records.where((b) => b.pricePending).length;
+    return [
+      'No se resta del balance',
+      if (noPrice == 1) '1 sin precio',
+      if (noPrice > 1) '$noPrice sin precio',
+    ].join(' · ');
   }
 
   static List<MonthTotals> _lastMonths(

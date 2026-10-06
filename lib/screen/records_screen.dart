@@ -140,9 +140,7 @@ class _RecordsScreenState<T extends FinanceRecord>
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  visible.length == 1
-                                      ? '1 registro'
-                                      : '${visible.length} registros',
+                                  _countLabel(visible),
                                   style: textTheme.bodySmall?.copyWith(
                                     color: tokens.textMuted,
                                   ),
@@ -250,8 +248,30 @@ class _RecordsScreenState<T extends FinanceRecord>
         child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
       ),
       onDismissed: (_) => _delete(record),
-      child: RecordTile(record: record, kind: kind, onTap: () => _edit(record)),
+      child: RecordTile(
+        record: record,
+        kind: kind,
+        onTap: () => _edit(record),
+        onToggleDone: kind.canMarkDone
+            ? () => context.read<RecordProvider<T>>().toggleDone(record)
+            : null,
+      ),
     );
+  }
+
+  /// "5 registros"; en deudas y compras añade cuántas faltan:
+  /// "5 registros · 2 pendientes" o "5 registros · todas canceladas".
+  String _countLabel(List<T> records) {
+    final count = records.length == 1
+        ? '1 registro'
+        : '${records.length} registros';
+    if (!kind.canMarkDone || records.isEmpty) return count;
+    final pending = records.where((r) => !r.done).length;
+    if (pending == 0) return '$count · todas ${kind.doneLabel!.toLowerCase()}s';
+    final label = kind.pendingLabel!.toLowerCase();
+    // "pendiente" lleva plural; "por comprar" no cambia.
+    final plural = pending == 1 || label.contains(' ') ? label : '${label}s';
+    return '$count · $pending $plural';
   }
 
   Widget _filterChip(String label, DateTime? value, Color accent) {

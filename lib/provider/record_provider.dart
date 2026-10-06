@@ -21,7 +21,15 @@ class RecordProvider<T extends FinanceRecord> with ChangeNotifier {
   /// antiguos sin fecha van al final.
   List<T> get records => _records;
 
+  /// Suma de todos los registros. En deudas incluye las canceladas: el
+  /// dinero con que se pagaron ya salió del balance.
   double get total => _records.fold(0.0, (sum, r) => sum + r.amount);
+
+  /// Registros aún no marcados como hechos (deudas por pagar, compras por
+  /// hacer).
+  Iterable<T> get pending => _records.where((r) => !r.done);
+
+  double get pendingTotal => pending.fold(0.0, (sum, r) => sum + r.amount);
 
   void _reload() {
     final entries = _box.values.toList().asMap().entries.toList();
@@ -47,16 +55,14 @@ class RecordProvider<T extends FinanceRecord> with ChangeNotifier {
     _reload();
   }
 
+  /// Marca [record] como hecho, o lo vuelve a dejar pendiente.
+  Future<void> toggleDone(T record) =>
+      update(record, copyRecord(builder, record, done: !record.done));
+
   /// Borra [record] y devuelve una copia que se puede pasar a [add] para
   /// deshacer la operación.
   Future<T> delete(T record) async {
-    final copy = builder(
-      name: record.name,
-      amount: record.amount,
-      date: record.date,
-      category: record.category,
-      note: record.note,
-    );
+    final copy = copyRecord(builder, record);
     await record.delete();
     _reload();
     return copy;

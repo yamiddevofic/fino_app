@@ -10,5 +10,7 @@ class Expense extends FinanceRecord {
     super.date,
     super.category,
     super.note,
+    super.done,
+    super.pricePending,
   });
 }

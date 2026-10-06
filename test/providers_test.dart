@@ -95,4 +95,25 @@ void main() {
     expect(buy.category, 'Mercado');
     expect(buy.date, DateTime(2026, 2, 3));
   });
+
+  test('toggleDone marca y desmarca sin perder datos', () async {
+    final provider = DebtProvider();
+    await provider.add(
+      Debt(name: 'Préstamo', amount: 1000, category: 'Préstamo', note: 'Mamá'),
+    );
+    await provider.add(Debt(name: 'Tarjeta', amount: 500));
+
+    await provider.toggleDone(
+      provider.records.firstWhere((r) => r.name == 'Préstamo'),
+    );
+    final loan = provider.records.firstWhere((r) => r.name == 'Préstamo');
+    expect(loan.done, isTrue);
+    expect(loan.category, 'Préstamo');
+    expect(loan.note, 'Mamá');
+    expect(provider.total, 1500);
+    expect(provider.pendingTotal, 500);
+
+    await provider.toggleDone(loan);
+    expect(provider.pendingTotal, 1500);
+  });
 }

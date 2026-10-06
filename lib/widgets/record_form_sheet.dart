@@ -36,13 +36,14 @@ class _RecordForm<T extends FinanceRecord> extends StatefulWidget {
 class _RecordFormState<T extends FinanceRecord> extends State<_RecordForm<T>> {
   final _formKey = GlobalKey<FormState>();
   late final _amount = TextEditingController(
-    text: widget.initial == null
+    text: widget.initial == null || widget.initial!.pricePending
         ? ''
         : formatCop(widget.initial!.amount).replaceAll(r'$', '').trim(),
   );
   late final _name = TextEditingController(text: widget.initial?.name);
   late final _note = TextEditingController(text: widget.initial?.note);
   late String? _category = widget.initial?.category;
+  late bool _pricePending = widget.initial?.pricePending ?? false;
   late DateTime _date =
       widget.initial?.date ?? DateUtils.dateOnly(DateTime.now());
 
@@ -73,10 +74,12 @@ class _RecordFormState<T extends FinanceRecord> extends State<_RecordForm<T>> {
       context,
       widget.builder(
         name: _name.text.trim(),
-        amount: parseAmount(_amount.text)!,
+        amount: _pricePending ? 0 : parseAmount(_amount.text)!,
         date: _date,
         category: _category,
         note: note.isEmpty ? null : note,
+        done: widget.initial?.done ?? false,
+        pricePending: _pricePending,
       ),
     );
   }
@@ -103,6 +106,7 @@ class _RecordFormState<T extends FinanceRecord> extends State<_RecordForm<T>> {
               const SizedBox(height: 20),
               TextFormField(
                 controller: _amount,
+                enabled: !_pricePending,
                 autofocus: !_editing,
                 cursorColor: accent,
                 keyboardType: const TextInputType.numberWithOptions(
@@ -125,6 +129,7 @@ class _RecordFormState<T extends FinanceRecord> extends State<_RecordForm<T>> {
                   ),
                 ),
                 validator: (value) {
+                  if (_pricePending) return null;
                   final amount = parseAmount(value ?? '');
                   if (amount == null || amount <= 0) {
                     return 'Ingresa un monto mayor que cero';
@@ -132,6 +137,24 @@ class _RecordFormState<T extends FinanceRecord> extends State<_RecordForm<T>> {
                   return null;
                 },
               ),
+              if (widget.kind.allowsPendingPrice)
+                CheckboxListTile(
+                  value: _pricePending,
+                  onChanged: (value) {
+                    setState(() => _pricePending = value ?? false);
+                    if (_pricePending) _amount.clear();
+                  },
+                  activeColor: accent,
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: const Text('Precio por definir'),
+                  subtitle: Text(
+                    'Lo agregas después editando la compra.',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: tokens.textMuted,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _name,

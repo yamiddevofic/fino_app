@@ -5,6 +5,7 @@ import 'package:fino_app/models/debts_model.dart';
 import 'package:fino_app/models/expenses_model.dart';
 import 'package:fino_app/models/incomes_model.dart';
 import 'package:fino_app/models/record_kind.dart';
+import 'package:fino_app/models/settings_model.dart';
 import 'package:fino_app/provider/buy_provider.dart';
 import 'package:fino_app/provider/debts_provider.dart';
 import 'package:fino_app/provider/expenses_provider.dart';
@@ -41,6 +42,7 @@ void registerAdapters() {
   Hive.registerAdapter(ExpenseAdapter());
   Hive.registerAdapter(BuyAdapter());
   Hive.registerAdapter(DebtAdapter());
+  Hive.registerAdapter(SettingsAdapter());
 }
 
 Future<void> openBoxes() async {
@@ -48,6 +50,7 @@ Future<void> openBoxes() async {
   await Hive.openBox<Expense>(RecordKind.expense.boxName);
   await Hive.openBox<Buy>(RecordKind.buy.boxName);
   await Hive.openBox<Debt>(RecordKind.debt.boxName);
+  await Hive.openBox<Settings>(settingsBoxName);
 }
 
 /// Registra un provider por tipo de registro. Las cajas de Hive deben estar
@@ -70,37 +73,28 @@ class AppProviders extends StatelessWidget {
       ChangeNotifierProvider<RecordProvider<Debt>>(
         create: (_) => DebtProvider(),
       ),
+      ChangeNotifierProvider(create: (_) => SettingsProvider()),
     ],
     child: child,
   );
 }
 
-class FinoApp extends StatefulWidget {
+class FinoApp extends StatelessWidget {
   const FinoApp({super.key});
 
   @override
-  State<FinoApp> createState() => _FinoAppState();
-}
-
-class _FinoAppState extends State<FinoApp> {
-  ThemeMode _themeMode = ThemeMode.system;
-
-  @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
     return MaterialApp(
       title: 'Fino',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
-      themeMode: _themeMode,
+      themeMode: settings.themeMode,
       locale: const Locale('es', 'CO'),
       supportedLocales: const [Locale('es', 'CO'), Locale('es')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      home: HomeShell(
-        onToggleTheme: (isDark) => setState(
-          () => _themeMode = isDark ? ThemeMode.light : ThemeMode.dark,
-        ),
-      ),
+      home: HomeShell(onToggleTheme: (isDark) => settings.setDarkMode(!isDark)),
     );
   }
 }

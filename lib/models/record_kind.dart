@@ -36,6 +36,8 @@ enum RecordKind {
     accentLight: Color(0xFF7C3AED),
     accentDark: Color(0xFFA78BFA),
     categories: ['Tarjeta', 'Préstamo', 'Personal', 'Otro'],
+    doneLabel: 'Cancelada',
+    pendingLabel: 'Pendiente',
   ),
   buy(
     title: 'Compras',
@@ -45,6 +47,9 @@ enum RecordKind {
     accentLight: Color(0xFFD97706),
     accentDark: Color(0xFFFBBF24),
     categories: ['Mercado', 'Hogar', 'Tecnología', 'Ropa', 'Otro'],
+    doneLabel: 'Comprada',
+    pendingLabel: 'Por comprar',
+    allowsPendingPrice: true,
   );
 
   const RecordKind({
@@ -55,6 +60,9 @@ enum RecordKind {
     required this.accentLight,
     required this.accentDark,
     required this.categories,
+    this.doneLabel,
+    this.pendingLabel,
+    this.allowsPendingPrice = false,
   });
 
   final String title;
@@ -64,6 +72,16 @@ enum RecordKind {
   final Color accentLight;
   final Color accentDark;
   final List<String> categories;
+
+  /// Texto para un registro marcado como hecho (deuda cancelada, compra
+  /// realizada). `null` si la sección no se puede marcar.
+  final String? doneLabel;
+  final String? pendingLabel;
+
+  /// Si se puede registrar sin precio y definirlo después.
+  final bool allowsPendingPrice;
+
+  bool get canMarkDone => doneLabel != null;
 
   /// Color legible para texto o iconos encima de [accent].
   Color onAccent(BuildContext context) =>
