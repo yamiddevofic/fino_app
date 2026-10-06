@@ -67,8 +67,8 @@ class _FinoAppState extends State<finoApp> with SingleTickerProviderStateMixin {
     const Color(0xFF36A0DD), // HomeScreen
     const Color(0xFF28A745), // IncomesScreen
     const Color(0xFFE70000), // ExpensesScreen
+    const Color(0xFF2C89DB), // DebtsScreen
     const Color(0xFFEC9128), // BuysScreen
-    const Color(0xFF2C89DB), // DebtScreen
   ];
 
 // Colores para el modo oscuro
@@ -76,9 +76,8 @@ class _FinoAppState extends State<finoApp> with SingleTickerProviderStateMixin {
     const Color(0xFFC2C2C2), // HomeScreen
     const Color(0xFF86FF05), // IncomesScreen
     const Color(0xFFE70000), // ExpensesScreen
+    const Color(0xFF00C8FF), // DebtsScreen
     const Color(0xFFFFD900), // BuysScreen
-    const Color(0xFF00C8FF), // BuysScreen
-
   ];
 
   final ThemeData temaClaro = ThemeData(
