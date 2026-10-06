@@ -16,9 +16,7 @@ class SettingsAdapter extends TypeAdapter<Settings> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return Settings(
-      isDarkMode: fields[0] as bool,
-    );
+    return Settings(isDarkMode: fields[0] as bool);
   }
 
   @override

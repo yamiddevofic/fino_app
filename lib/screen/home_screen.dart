@@ -1,315 +1,367 @@
-import 'package:fino_app/app_colors.dart';
-import 'package:fino_app/provider/debts_provider.dart';
-import 'package:fino_app/provider/expenses_provider.dart';
-import 'package:fino_app/provider/incomes_provider.dart';
+import 'package:fino_app/models/buys_model.dart';
+import 'package:fino_app/models/debts_model.dart';
+import 'package:fino_app/models/expenses_model.dart';
+import 'package:fino_app/models/finance_record.dart';
+import 'package:fino_app/models/incomes_model.dart';
+import 'package:fino_app/models/record_kind.dart';
+import 'package:fino_app/provider/record_provider.dart';
+import 'package:fino_app/theme/app_theme.dart';
+import 'package:fino_app/utils/amount.dart';
+import 'package:fino_app/widgets/charts.dart';
+import 'package:fino_app/widgets/common.dart';
+import 'package:fino_app/widgets/record_tile.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.onOpenSection});
+
+  /// Abre la pestaña de una sección al tocar su fila en el desglose.
+  final ValueChanged<RecordKind>? onOpenSection;
 
   @override
   Widget build(BuildContext context) {
-    final incomes = context
-        .watch<IncomeProvider>()
-        .incomes
-        .fold<double>(0, (total, item) => total + item.amount);
-    final expenses = context
-        .watch<ExpenseProvider>()
-        .expenses
-        .fold<double>(0, (total, item) => total + item.amount);
-    final debtProvider = context.watch<DebtProvider>();
-    final debtsTotal = debtProvider.totalDebts;
-    final debtsPending = debtProvider.pendingTotal;
-    final hasPendingDebts = debtProvider.pendingCount > 0;
-    final balance = incomes - expenses - debtsTotal;
-    final theme = Theme.of(context);
-    final colors = AppColors.accents(theme.brightness);
-    final color = colors[AppSection.overview.index];
-    final muted = theme.colorScheme.onSurfaceVariant;
-    final foreground = AppColors.onAccent(color);
-    final numberFormat = NumberFormat('#,##0.00', 'es_CO');
-    final message = _financialMessage(balance, hasPendingDebts);
+    final incomes = context.watch<RecordProvider<Income>>();
+    final expenses = context.watch<RecordProvider<Expense>>();
+    final debts = context.watch<RecordProvider<Debt>>();
+    final buys = context.watch<RecordProvider<Buy>>();
+    final tokens = AppTokens.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.screen,
-            AppSpacing.lg,
-            AppSpacing.screen,
-            AppSpacing.xxl,
+    final outgoing = expenses.total + debts.total;
+    final balance = incomes.total - outgoing;
+    final committed = incomes.total > 0
+        ? outgoing / incomes.total
+        : (outgoing > 0 ? 1.0 : 0.0);
+
+    final recent =
+        <(RecordKind, FinanceRecord)>[
+          for (final r in incomes.records) (RecordKind.income, r),
+          for (final r in expenses.records) (RecordKind.expense, r),
+          for (final r in debts.records) (RecordKind.debt, r),
+          for (final r in buys.records) (RecordKind.buy, r),
+        ]..sort((a, b) {
+          final da = a.$2.date, db = b.$2.date;
+          if (da == null) return db == null ? 0 : 1;
+          if (db == null) return -1;
+          return db.compareTo(da);
+        });
+
+    final breakdown = [
+      (RecordKind.income, incomes.total, null),
+      (RecordKind.expense, expenses.total, null),
+      (RecordKind.debt, debts.total, _debtNote(debts)),
+      (RecordKind.buy, buys.total, _buyNote(buys)),
+    ];
+    final maxBreakdown = breakdown.fold<double>(
+      0,
+      (m, e) => e.$2 > m ? e.$2 : m,
+    );
+
+    var section = 0;
+    Widget block(Widget child) => FadeSlideIn(index: section++, child: child);
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        8,
+        20,
+        MediaQuery.paddingOf(context).bottom + 24,
+      ),
+      children: [
+        ContentWidth(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              block(
+                SectionCard(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Balance general',
+                              style: textTheme.labelMedium,
+                            ),
+                            const SizedBox(height: 6),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: AnimatedAmount(
+                                value: balance,
+                                style: textTheme.headlineMedium?.copyWith(
+                                  color: balance < 0
+                                      ? tokens.negative
+                                      : tokens.text,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Ingresos − (gastos + deudas)',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: tokens.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      ProgressRing(
+                        value: committed,
+                        color: committed >= 1 ? tokens.negative : tokens.brand,
+                        trackColor: tokens.surfaceMuted,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${(committed * 100).clamp(0, 999).round()}%',
+                              style: textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                fontFeatures: tabularFigures,
+                              ),
+                            ),
+                            Text(
+                              'usado',
+                              style: textTheme.labelSmall?.copyWith(
+                                color: tokens.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              block(const SectionLabel('Desglose')),
+              block(
+                SectionCard(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Column(
+                    children: [
+                      for (final (kind, total, note) in breakdown)
+                        _BreakdownRow(
+                          kind: kind,
+                          total: total,
+                          share: maxBreakdown > 0 ? total / maxBreakdown : 0,
+                          note: note,
+                          onTap: onOpenSection == null
+                              ? null
+                              : () => onOpenSection!(kind),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              block(
+                SectionLabel(
+                  'Últimos 6 meses',
+                  trailing: _Legend(
+                    incomeColor: RecordKind.income.accent(context),
+                    expenseColor: RecordKind.expense.accent(context),
+                  ),
+                ),
+              ),
+              block(
+                SectionCard(
+                  child: MonthlyBars(
+                    months: _lastMonths(incomes.records, expenses.records),
+                    incomeColor: RecordKind.income.accent(context),
+                    expenseColor: RecordKind.expense.accent(context),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              block(const SectionLabel('Movimientos recientes')),
+              block(
+                recent.isEmpty
+                    ? SectionCard(
+                        child: EmptyState(
+                          color: tokens.brand,
+                          title: 'Sin movimientos todavía',
+                          message:
+                              'Registra tus ingresos y gastos desde las pestañas de abajo.',
+                        ),
+                      )
+                    : SectionCard(
+                        padding: EdgeInsets.zero,
+                        child: Column(
+                          children: [
+                            for (final (i, (kind, record))
+                                in recent.take(5).indexed) ...[
+                              if (i > 0) const Divider(indent: 70, height: 1),
+                              RecordTile(record: record, kind: kind),
+                            ],
+                          ],
+                        ),
+                      ),
+              ),
+            ],
           ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
+        ),
+      ],
+    );
+  }
+
+  /// Las deudas canceladas siguen restando del balance (ese dinero ya
+  /// salió); la nota muestra cuánto falta por pagar.
+  static String? _debtNote(RecordProvider<Debt> debts) {
+    if (debts.records.isEmpty) return null;
+    if (debts.pending.isEmpty) return 'Todas canceladas';
+    return 'Por pagar: ${formatCop(debts.pendingTotal)}';
+  }
+
+  static String _buyNote(RecordProvider<Buy> buys) {
+    final noPrice = buys.records.where((b) => b.pricePending).length;
+    return [
+      'No se resta del balance',
+      if (noPrice == 1) '1 sin precio',
+      if (noPrice > 1) '$noPrice sin precio',
+    ].join(' · ');
+  }
+
+  static List<MonthTotals> _lastMonths(
+    List<FinanceRecord> incomes,
+    List<FinanceRecord> expenses,
+  ) {
+    final now = DateTime.now();
+    double sum(List<FinanceRecord> records, DateTime month) => records
+        .where(
+          (r) =>
+              r.date != null &&
+              r.date!.year == month.year &&
+              r.date!.month == month.month,
+        )
+        .fold(0.0, (s, r) => s + r.amount);
+
+    return [
+      for (var i = 5; i >= 0; i--)
+        () {
+          final month = DateTime(now.year, now.month - i);
+          return MonthTotals(month, sum(incomes, month), sum(expenses, month));
+        }(),
+    ];
+  }
+}
+
+class _BreakdownRow extends StatelessWidget {
+  const _BreakdownRow({
+    required this.kind,
+    required this.total,
+    required this.share,
+    this.note,
+    this.onTap,
+  });
+
+  final RecordKind kind;
+  final double total;
+  final double share;
+  final String? note;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = AppTokens.of(context);
+    final accent = kind.accent(context);
+    final textTheme = Theme.of(context).textTheme;
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            AccentIcon(icon: kind.icon, color: accent, size: 36),
+            const SizedBox(width: 14),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('TU DINERO, EN ORDEN',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: muted,
-                        fontSize: 12,
-                        letterSpacing: 1.1,
-                      )),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Resumen financiero',
-                    style: theme.textTheme.headlineSmall,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          kind.title,
+                          style: textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        formatCop(total),
+                        style: textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          fontFeatures: tabularFigures,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                  _BalanceCard(
-                    color: color,
-                    foreground: foreground,
-                    balance: balance,
-                    formattedBalance: numberFormat.format(balance),
-                    message: message,
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: share),
+                      duration: const Duration(milliseconds: 1100),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, v, _) => LinearProgressIndicator(
+                        value: v,
+                        minHeight: 4,
+                        color: accent,
+                        backgroundColor: tokens.surfaceMuted,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: AppSpacing.xl),
-                  Text('Resumen por categoría',
-                      style: theme.textTheme.titleLarge),
-                  const SizedBox(height: AppSpacing.md),
-                  _MetricCard(
-                    category: 'Ingresos',
-                    amount: incomes,
-                    color: colors[1],
-                    icon: Icons.south_west_rounded,
-                  ),
-                  _MetricCard(
-                    category: 'Gastos',
-                    amount: expenses,
-                    color: colors[2],
-                    icon: Icons.north_east_rounded,
-                  ),
-                  _MetricCard(
-                    category: 'Deudas',
-                    amount: debtsTotal,
-                    color: colors[3],
-                    icon: Icons.account_balance_outlined,
-                    subtitle: debtsPending > 0
-                        ? 'Pendientes: ${numberFormat.format(debtsPending)}'
-                        : 'Todas al día',
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'Totales acumulados de tus registros',
-                    style: theme.textTheme.bodySmall,
-                  ),
+                  if (note != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      note!,
+                      style: textTheme.labelSmall?.copyWith(
+                        color: tokens.textMuted,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
-
-  String _financialMessage(double balance, bool hasPendingDebts) {
-    if (hasPendingDebts) return 'Tienes deudas pendientes';
-    if (balance > 0) return 'Buen momento, estás en positivo';
-    if (balance < 0) return 'Revisa tus gastos, estás en negativo';
-    return 'Estás en equilibrio, mantén el control';
-  }
 }
 
-class _BalanceCard extends StatelessWidget {
-  final Color color;
-  final Color foreground;
-  final double balance;
-  final String formattedBalance;
-  final String message;
+class _Legend extends StatelessWidget {
+  const _Legend({required this.incomeColor, required this.expenseColor});
 
-  const _BalanceCard({
-    required this.color,
-    required this.foreground,
-    required this.balance,
-    required this.formattedBalance,
-    required this.message,
-  });
+  final Color incomeColor;
+  final Color expenseColor;
 
   @override
   Widget build(BuildContext context) {
-    final positive = balance >= 0;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(AppRadius.hero),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: .3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Balance disponible',
-                  style: TextStyle(
-                    color: foreground.withValues(alpha: .85),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: .2,
-                  ),
-                ),
-              ),
-              Icon(Icons.account_balance_wallet_outlined,
-                  color: foreground, size: 24),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          SizedBox(
-            width: double.infinity,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'COP $formattedBalance',
-                style: TextStyle(
-                  color: foreground,
-                  fontSize: 36,
-                  height: 1.1,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -.5,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            message,
-            style: TextStyle(
-              color: foreground.withValues(alpha: .9),
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Row(
-            children: [
-              Icon(
-                positive ? Icons.trending_up_rounded : Icons.info_outline,
-                color: foreground.withValues(alpha: .85),
-                size: 18,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                positive ? 'Balance positivo' : 'Balance por revisar',
-                style: TextStyle(
-                  color: foreground.withValues(alpha: .85),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+    final style = Theme.of(
+      context,
+    ).textTheme.labelSmall?.copyWith(color: AppTokens.of(context).textMuted);
+    Widget dot(Color c) => Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(color: c, shape: BoxShape.circle),
     );
-  }
-}
-
-class _MetricCard extends StatelessWidget {
-  final String category;
-  final double amount;
-  final Color color;
-  final IconData icon;
-  final String? subtitle;
-
-  const _MetricCard({
-    required this.category,
-    required this.amount,
-    required this.color,
-    required this.icon,
-    this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final amountText = NumberFormat('#,##0.00', 'es_CO').format(amount);
-    final foreground = AppColors.onAccent(color);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.md),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: .3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: foreground.withValues(alpha: .15),
-              borderRadius: BorderRadius.circular(AppRadius.control),
-            ),
-            child: Icon(icon, color: foreground, size: 22),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  category,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: foreground,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    subtitle!,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: foreground.withValues(alpha: .8),
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 160),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerRight,
-              child: Text(
-                'COP $amountText',
-                textAlign: TextAlign.right,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: foreground,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        dot(incomeColor),
+        const SizedBox(width: 4),
+        Text('Ingresos', style: style),
+        const SizedBox(width: 10),
+        dot(expenseColor),
+        const SizedBox(width: 4),
+        Text('Gastos', style: style),
+      ],
     );
   }
 }

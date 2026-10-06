@@ -1,17 +1,16 @@
-import 'package:hive/hive.dart';
+import 'package:fino_app/models/finance_record.dart';
 
 part 'expenses_model.g.dart';
 
-@HiveType(typeId: 0)
-class Expense {
-  @HiveField(0)
-  final String name;
-
-  @HiveField(1)
-  final double amount;
-
-  @HiveField(2)
-  final DateTime? date;
-
-  Expense({required this.name, required this.amount, this.date});
+/// Un gasto registrado por el usuario.
+class Expense extends FinanceRecord {
+  Expense({
+    required super.name,
+    required super.amount,
+    super.date,
+    super.category,
+    super.note,
+    super.done,
+    super.pricePending,
+  });
 }

@@ -10,9 +10,11 @@ FINO es una aplicacion Flutter de finanzas personales con persistencia local.
 La aplicacion no tiene backend ni sincronizacion remota.
 
 - Punto de entrada: `lib/main.dart`.
-- UI: `lib/screen/`.
-- Modelos Hive: `lib/models/`.
-- Estado y acceso a datos: `lib/provider/`.
+- UI: `lib/screen/` (Inicio y `RecordsScreen<T>`, comun a las cuatro
+  secciones), `lib/widgets/` y `lib/theme/`.
+- Modelos Hive: `lib/models/`. `FinanceRecord` es la base de los cuatro
+  registros y `RecordKind` describe cada seccion.
+- Estado y acceso a datos: `lib/provider/` (`RecordProvider<T>`).
 - Pruebas: `test/`.
 - Recursos: `assets/`.
 
@@ -27,8 +29,10 @@ La aplicacion no tiene backend ni sincronizacion remota.
   UI; evita acceder directamente a Hive desde una pantalla.
 - Si cambias un modelo Hive, conserva los `typeId` y `field` existentes para no
   romper datos persistidos.
-- Regenera los archivos `.g.dart` cuando cambien las anotaciones o campos de un
-  modelo.
+- Los adaptadores de los registros estan escritos a mano en
+  `lib/models/finance_record.dart`, con la tabla de campos. Para un campo
+  nuevo usa un numero libre y agrega una prueba en `test/legacy_data_test.dart`.
+  `settings_model.g.dart` sigue siendo generado.
 - Registra nuevas cajas y adaptadores en `lib/main.dart` cuando corresponda.
 - Usa nombres descriptivos y comentarios solo cuando aclaren una decision o
   una parte no obvia del codigo.
@@ -52,14 +56,9 @@ Desde la raiz del repositorio:
 
 ```bash
 flutter pub get
+dart format lib test
 flutter analyze
 flutter test
-```
-
-Si se modifican modelos Hive:
-
-```bash
-dart run build_runner build --delete-conflicting-outputs
 ```
 
 Para ejecutar la aplicacion:
