@@ -38,8 +38,9 @@ class RecordTile extends StatelessWidget {
     ].join(' · ');
     final sign = switch (kind) {
       RecordKind.income => '+',
-      RecordKind.expense || RecordKind.debt => '−',
-      RecordKind.buy => '',
+      RecordKind.expense => '−',
+      // Deudas y compras no son movimientos hasta que se pagan.
+      RecordKind.debt || RecordKind.buy => '',
     };
 
     final icon = AccentIcon(icon: kind.iconFor(record.category), color: accent);
@@ -162,11 +163,7 @@ class _DoneToggle extends StatelessWidget {
                     ),
                     child: Icon(
                       Icons.check_rounded,
-                      color:
-                          ThemeData.estimateBrightnessForColor(color) ==
-                              Brightness.dark
-                          ? Colors.white
-                          : const Color(0xFF0E1116),
+                      color: onColor(color),
                       size: 22,
                     ),
                   )

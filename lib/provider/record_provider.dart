@@ -45,9 +45,11 @@ class RecordProvider<T extends FinanceRecord> with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> add(T record) async {
-    await _box.add(record);
+  /// Guarda [record] y devuelve su clave en la caja.
+  Future<int> add(T record) async {
+    final key = await _box.add(record);
     _reload();
+    return key;
   }
 
   Future<void> update(T original, T updated) async {
@@ -55,9 +57,12 @@ class RecordProvider<T extends FinanceRecord> with ChangeNotifier {
     _reload();
   }
 
-  /// Marca [record] como hecho, o lo vuelve a dejar pendiente.
-  Future<void> toggleDone(T record) =>
-      update(record, copyRecord(builder, record, done: !record.done));
+  /// Borra el registro con [key], si todavía existe.
+  Future<void> deleteKey(int key) async {
+    if (!_box.containsKey(key)) return;
+    await _box.delete(key);
+    _reload();
+  }
 
   /// Borra [record] y devuelve una copia que se puede pasar a [add] para
   /// deshacer la operación.

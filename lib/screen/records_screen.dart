@@ -1,11 +1,16 @@
+import 'package:fino_app/models/expenses_model.dart';
 import 'package:fino_app/models/finance_record.dart';
 import 'package:fino_app/models/record_kind.dart';
 import 'package:fino_app/provider/record_provider.dart';
+import 'package:fino_app/provider/settlement.dart';
 import 'package:fino_app/theme/app_theme.dart';
+import 'package:fino_app/utils/amount.dart';
 import 'package:fino_app/widgets/charts.dart';
 import 'package:fino_app/widgets/common.dart';
+import 'package:fino_app/widgets/price_dialog.dart';
 import 'package:fino_app/widgets/record_form_sheet.dart';
 import 'package:fino_app/widgets/record_tile.dart';
+import 'package:fino_app/widgets/wave_card.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -60,6 +65,44 @@ class _RecordsScreenState<T extends FinanceRecord>
     if (updated != null) await provider.update(original, updated);
   }
 
+  Future<void> _toggleSettled(T record) async {
+    final records = context.read<RecordProvider<T>>();
+    final expenses = context.read<RecordProvider<Expense>>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    double? price;
+    if (!record.done && record.pricePending) {
+      price = await showPriceDialog(
+        context,
+        itemName: record.name,
+        accent: kind.accent(context),
+      );
+      if (price == null) return;
+    }
+
+    final settling = !record.done;
+    final amount = price ?? record.amount;
+    await toggleSettled(
+      records: records,
+      expenses: expenses,
+      kind: kind,
+      record: record,
+      price: price,
+    );
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            settling
+                ? 'Se registró un gasto de ${formatCop(amount)}'
+                : 'Se quitó el gasto de ${formatCop(amount)}',
+          ),
+        ),
+      );
+  }
+
   Future<void> _delete(T record) async {
     final provider = context.read<RecordProvider<T>>();
     final messenger = ScaffoldMessenger.of(context);
@@ -96,7 +139,16 @@ class _RecordsScreenState<T extends FinanceRecord>
     }
 
     final visible = all.where(_matches).toList();
-    final total = visible.fold<double>(0, (s, r) => s + r.amount);
+    // En deudas y compras el total relevante es lo que falta: lo pagado ya
+    // está registrado como gasto.
+    final total = visible
+        .where((r) => !kind.canMarkDone || !r.done)
+        .fold<double>(0, (s, r) => s + r.amount);
+    final totalLabel = kind.canMarkDone
+        ? kind == RecordKind.debt
+              ? 'Por pagar'
+              : 'Por comprar'
+        : 'Total de ${kind.title.toLowerCase()}';
     final monthLabel = DateFormat.yMMMM('es');
 
     // La barra de navegación se dibuja encima del contenido (extendBody),
@@ -112,7 +164,8 @@ class _RecordsScreenState<T extends FinanceRecord>
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
                   child: FadeSlideIn(
-                    child: SectionCard(
+                    child: WaveCard(
+                      accent: accent,
                       child: Row(
                         children: [
                           Expanded(
@@ -121,10 +174,10 @@ class _RecordsScreenState<T extends FinanceRecord>
                               children: [
                                 Text(
                                   _month == null
-                                      ? 'Total de ${kind.title.toLowerCase()}'
+                                      ? totalLabel
                                       : _month == _noDate
-                                      ? 'Sin fecha'
-                                      : _capitalize(monthLabel.format(_month!)),
+                                      ? '$totalLabel · sin fecha'
+                                      : '$totalLabel · ${monthLabel.format(_month!)}',
                                   style: textTheme.labelMedium,
                                 ),
                                 const SizedBox(height: 6),
@@ -252,9 +305,7 @@ class _RecordsScreenState<T extends FinanceRecord>
         record: record,
         kind: kind,
         onTap: () => _edit(record),
-        onToggleDone: kind.canMarkDone
-            ? () => context.read<RecordProvider<T>>().toggleDone(record)
-            : null,
+        onToggleDone: kind.canMarkDone ? () => _toggleSettled(record) : null,
       ),
     );
   }

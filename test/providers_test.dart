@@ -5,10 +5,13 @@ import 'package:fino_app/models/buys_model.dart';
 import 'package:fino_app/models/debts_model.dart';
 import 'package:fino_app/models/expenses_model.dart';
 import 'package:fino_app/models/incomes_model.dart';
+import 'package:fino_app/models/record_kind.dart';
 import 'package:fino_app/provider/buy_provider.dart';
+import 'package:fino_app/provider/category_provider.dart';
 import 'package:fino_app/provider/debts_provider.dart';
 import 'package:fino_app/provider/expenses_provider.dart';
 import 'package:fino_app/provider/incomes_provider.dart';
+import 'package:fino_app/provider/settlement.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
@@ -96,24 +99,108 @@ void main() {
     expect(buy.date, DateTime(2026, 2, 3));
   });
 
-  test('toggleDone marca y desmarca sin perder datos', () async {
-    final provider = DebtProvider();
-    await provider.add(
+  test('pagar una deuda registra un gasto y desmarcarla lo quita', () async {
+    final debts = DebtProvider();
+    final expenses = ExpenseProvider();
+    await debts.add(
       Debt(name: 'Préstamo', amount: 1000, category: 'Préstamo', note: 'Mamá'),
     );
-    await provider.add(Debt(name: 'Tarjeta', amount: 500));
+    await debts.add(Debt(name: 'Tarjeta', amount: 500));
+    expect(expenses.records, isEmpty);
+    expect(debts.pendingTotal, 1500);
 
-    await provider.toggleDone(
-      provider.records.firstWhere((r) => r.name == 'Préstamo'),
+    await toggleSettled(
+      records: debts,
+      expenses: expenses,
+      kind: RecordKind.debt,
+      record: debts.records.firstWhere((r) => r.name == 'Préstamo'),
     );
-    final loan = provider.records.firstWhere((r) => r.name == 'Préstamo');
+    final loan = debts.records.firstWhere((r) => r.name == 'Préstamo');
     expect(loan.done, isTrue);
     expect(loan.category, 'Préstamo');
     expect(loan.note, 'Mamá');
-    expect(provider.total, 1500);
-    expect(provider.pendingTotal, 500);
+    expect(debts.pendingTotal, 500);
+    final payment = expenses.records.single;
+    expect(payment.name, 'Préstamo');
+    expect(payment.amount, 1000);
+    expect(payment.category, 'Deudas');
+    expect(loan.expenseKey, payment.key);
 
-    await provider.toggleDone(loan);
-    expect(provider.pendingTotal, 1500);
+    await toggleSettled(
+      records: debts,
+      expenses: expenses,
+      kind: RecordKind.debt,
+      record: loan,
+    );
+    expect(expenses.records, isEmpty);
+    expect(debts.pendingTotal, 1500);
+    expect(
+      debts.records.firstWhere((r) => r.name == 'Préstamo').expenseKey,
+      isNull,
+    );
+  });
+
+  test('una compra sin precio se completa con el precio indicado', () async {
+    final buys = BuyProvider();
+    final expenses = ExpenseProvider();
+    await buys.add(Buy(name: 'Nevera', amount: 0, pricePending: true));
+
+    await toggleSettled(
+      records: buys,
+      expenses: expenses,
+      kind: RecordKind.buy,
+      record: buys.records.single,
+      price: 2500000,
+    );
+
+    final buy = buys.records.single;
+    expect(buy.done, isTrue);
+    expect(buy.pricePending, isFalse);
+    expect(buy.amount, 2500000);
+    expect(expenses.records.single.amount, 2500000);
+    expect(expenses.records.single.category, 'Compras');
+  });
+
+  test('desmarcar no falla si el gasto ya se había borrado', () async {
+    final debts = DebtProvider();
+    final expenses = ExpenseProvider();
+    await debts.add(Debt(name: 'Tarjeta', amount: 500));
+    await toggleSettled(
+      records: debts,
+      expenses: expenses,
+      kind: RecordKind.debt,
+      record: debts.records.single,
+    );
+    await expenses.delete(expenses.records.single);
+
+    await toggleSettled(
+      records: debts,
+      expenses: expenses,
+      kind: RecordKind.debt,
+      record: debts.records.single,
+    );
+    expect(debts.records.single.done, isFalse);
+  });
+
+  group('CategoryProvider', () {
+    test('agrega, valida y elimina categorías propias', () async {
+      final categories = CategoryProvider();
+      expect(categories.validate(RecordKind.expense, 'Mascotas'), isNull);
+
+      await categories.add(RecordKind.expense, ' Mascotas ');
+      expect(categories.all(RecordKind.expense), contains('Mascotas'));
+      expect(categories.all(RecordKind.expense).last, 'Otro');
+      expect(categories.all(RecordKind.income), isNot(contains('Mascotas')));
+      expect(categories.isCustom(RecordKind.expense, 'Mascotas'), isTrue);
+      expect(categories.isCustom(RecordKind.expense, 'Comida'), isFalse);
+
+      expect(categories.validate(RecordKind.expense, 'mascotas'), isNotNull);
+      expect(categories.validate(RecordKind.expense, 'comida'), isNotNull);
+      expect(categories.validate(RecordKind.expense, '  '), isNotNull);
+      expect(categories.validate(RecordKind.expense, 'x' * 25), isNotNull);
+
+      await categories.remove(RecordKind.expense, 'Mascotas');
+      expect(categories.all(RecordKind.expense), isNot(contains('Mascotas')));
+    });
   });
 }

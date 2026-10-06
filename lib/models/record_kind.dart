@@ -1,3 +1,4 @@
+import 'package:fino_app/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 /// Metadatos de cada sección: textos, color de acento, icono y categorías.
@@ -25,6 +26,8 @@ enum RecordKind {
       'Servicios',
       'Salud',
       'Ocio',
+      'Deudas',
+      'Compras',
       'Otro',
     ],
   ),
@@ -36,8 +39,10 @@ enum RecordKind {
     accentLight: Color(0xFF7C3AED),
     accentDark: Color(0xFFA78BFA),
     categories: ['Tarjeta', 'Préstamo', 'Personal', 'Otro'],
-    doneLabel: 'Cancelada',
+    doneLabel: 'Pagada',
     pendingLabel: 'Pendiente',
+    settledCategory: 'Deudas',
+    settledNote: 'Pago de deuda',
   ),
   buy(
     title: 'Compras',
@@ -49,6 +54,8 @@ enum RecordKind {
     categories: ['Mercado', 'Hogar', 'Tecnología', 'Ropa', 'Otro'],
     doneLabel: 'Comprada',
     pendingLabel: 'Por comprar',
+    settledCategory: 'Compras',
+    settledNote: 'Compra de la lista',
     allowsPendingPrice: true,
   );
 
@@ -63,6 +70,8 @@ enum RecordKind {
     this.doneLabel,
     this.pendingLabel,
     this.allowsPendingPrice = false,
+    this.settledCategory,
+    this.settledNote,
   });
 
   final String title;
@@ -81,16 +90,21 @@ enum RecordKind {
   /// Si se puede registrar sin precio y definirlo después.
   final bool allowsPendingPrice;
 
+  /// Categoría y nota del gasto que se registra al marcar como lista.
+  final String? settledCategory;
+  final String? settledNote;
+
   bool get canMarkDone => doneLabel != null;
 
   /// Color legible para texto o iconos encima de [accent].
-  Color onAccent(BuildContext context) =>
-      ThemeData.estimateBrightnessForColor(accent(context)) == Brightness.dark
-      ? Colors.white
-      : const Color(0xFF0E1116);
+  Color onAccent(BuildContext context) => onColor(accent(context));
 
   /// Icono de una categoría, o el de la sección si no tiene categoría.
-  IconData iconFor(String? category) => _categoryIcons[category] ?? icon;
+  /// Las categorías creadas por el usuario usan una etiqueta genérica.
+  IconData iconFor(String? category) {
+    if (category == null || category == 'Otro') return icon;
+    return _categoryIcons[category] ?? Icons.sell_outlined;
+  }
 
   Color accent(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark
@@ -109,6 +123,8 @@ const _categoryIcons = <String, IconData>{
   'Servicios': Icons.bolt_rounded,
   'Salud': Icons.favorite_border_rounded,
   'Ocio': Icons.local_activity_outlined,
+  'Deudas': Icons.account_balance_outlined,
+  'Compras': Icons.shopping_bag_outlined,
   'Tarjeta': Icons.credit_card_rounded,
   'Préstamo': Icons.account_balance_outlined,
   'Personal': Icons.person_outline_rounded,

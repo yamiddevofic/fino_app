@@ -10,6 +10,7 @@ import 'package:fino_app/utils/amount.dart';
 import 'package:fino_app/widgets/charts.dart';
 import 'package:fino_app/widgets/common.dart';
 import 'package:fino_app/widgets/record_tile.dart';
+import 'package:fino_app/widgets/wave_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -28,18 +29,20 @@ class HomeScreen extends StatelessWidget {
     final tokens = AppTokens.of(context);
     final textTheme = Theme.of(context).textTheme;
 
-    final outgoing = expenses.total + debts.total;
-    final balance = incomes.total - outgoing;
+    // El balance solo cuenta dinero que ya se movió. Las deudas y compras
+    // pendientes se restan aparte, en el balance proyectado; al marcarlas
+    // como listas se registran como gastos.
+    final balance = incomes.total - expenses.total;
+    final pendingTotal = debts.pendingTotal + buys.pendingTotal;
+    final projected = balance - pendingTotal;
     final committed = incomes.total > 0
-        ? outgoing / incomes.total
-        : (outgoing > 0 ? 1.0 : 0.0);
+        ? expenses.total / incomes.total
+        : (expenses.total > 0 ? 1.0 : 0.0);
 
     final recent =
         <(RecordKind, FinanceRecord)>[
           for (final r in incomes.records) (RecordKind.income, r),
           for (final r in expenses.records) (RecordKind.expense, r),
-          for (final r in debts.records) (RecordKind.debt, r),
-          for (final r in buys.records) (RecordKind.buy, r),
         ]..sort((a, b) {
           final da = a.$2.date, db = b.$2.date;
           if (da == null) return db == null ? 0 : 1;
@@ -50,8 +53,8 @@ class HomeScreen extends StatelessWidget {
     final breakdown = [
       (RecordKind.income, incomes.total, null),
       (RecordKind.expense, expenses.total, null),
-      (RecordKind.debt, debts.total, _debtNote(debts)),
-      (RecordKind.buy, buys.total, _buyNote(buys)),
+      (RecordKind.debt, debts.pendingTotal, _debtNote(debts)),
+      (RecordKind.buy, buys.pendingTotal, _buyNote(buys)),
     ];
     final maxBreakdown = breakdown.fold<double>(
       0,
@@ -74,7 +77,8 @@ class HomeScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               block(
-                SectionCard(
+                WaveCard(
+                  accent: tokens.brand,
                   child: Row(
                     children: [
                       Expanded(
@@ -100,11 +104,30 @@ class HomeScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Ingresos − (gastos + deudas)',
+                              'Ingresos − gastos',
                               style: textTheme.bodySmall?.copyWith(
                                 color: tokens.textMuted,
                               ),
                             ),
+                            if (pendingTotal > 0) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                'Proyectado: ${formatCop(projected)}',
+                                style: textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  fontFeatures: tabularFigures,
+                                  color: projected < 0
+                                      ? tokens.negative
+                                      : tokens.text,
+                                ),
+                              ),
+                              Text(
+                                'Tras pagar lo pendiente',
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: tokens.textMuted,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -208,20 +231,23 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  /// Las deudas canceladas siguen restando del balance (ese dinero ya
-  /// salió); la nota muestra cuánto falta por pagar.
+  /// En deudas y compras el desglose muestra lo pendiente; lo ya pagado
+  /// está en los gastos.
   static String? _debtNote(RecordProvider<Debt> debts) {
     if (debts.records.isEmpty) return null;
-    if (debts.pending.isEmpty) return 'Todas canceladas';
-    return 'Por pagar: ${formatCop(debts.pendingTotal)}';
+    final pending = debts.pending.length;
+    if (pending == 0) return 'Todas pagadas';
+    return pending == 1 ? '1 por pagar' : '$pending por pagar';
   }
 
-  static String _buyNote(RecordProvider<Buy> buys) {
-    final noPrice = buys.records.where((b) => b.pricePending).length;
+  static String? _buyNote(RecordProvider<Buy> buys) {
+    if (buys.records.isEmpty) return null;
+    final pending = buys.pending.length;
+    if (pending == 0) return 'Todas compradas';
+    final noPrice = buys.pending.where((b) => b.pricePending).length;
     return [
-      'No se resta del balance',
-      if (noPrice == 1) '1 sin precio',
-      if (noPrice > 1) '$noPrice sin precio',
+      '$pending por comprar',
+      if (noPrice > 0) '$noPrice sin precio',
     ].join(' · ');
   }
 

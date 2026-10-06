@@ -7,6 +7,7 @@ import 'package:fino_app/models/incomes_model.dart';
 import 'package:fino_app/models/record_kind.dart';
 import 'package:fino_app/models/settings_model.dart';
 import 'package:fino_app/provider/buy_provider.dart';
+import 'package:fino_app/provider/category_provider.dart';
 import 'package:fino_app/provider/debts_provider.dart';
 import 'package:fino_app/provider/expenses_provider.dart';
 import 'package:fino_app/provider/incomes_provider.dart';
@@ -51,6 +52,7 @@ Future<void> openBoxes() async {
   await Hive.openBox<Buy>(RecordKind.buy.boxName);
   await Hive.openBox<Debt>(RecordKind.debt.boxName);
   await Hive.openBox<Settings>(settingsBoxName);
+  await Hive.openBox<List<dynamic>>(categoriesBoxName);
 }
 
 /// Registra un provider por tipo de registro. Las cajas de Hive deben estar
@@ -74,6 +76,7 @@ class AppProviders extends StatelessWidget {
         create: (_) => DebtProvider(),
       ),
       ChangeNotifierProvider(create: (_) => SettingsProvider()),
+      ChangeNotifierProvider(create: (_) => CategoryProvider()),
     ],
     child: child,
   );

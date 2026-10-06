@@ -2,7 +2,7 @@ name: fino_app
 description: "Fino: asistente de finanzas personales."
 publish_to: 'none'
 
-version: 1.1.0+2
+version: 1.2.0+3
 
 environment:
   sdk: ^3.9.0
@@ -28,13 +28,20 @@ dev_dependencies:
 
 flutter_launcher_icons:
   android: true
-  ios: true
-  image_path: "assets/images/carpeta.png"
+  ios: false
+  image_path: "assets/branding/app_icon.png"
+  adaptive_icon_background: "#4F46E5"
+  adaptive_icon_foreground: "assets/branding/app_icon_foreground.png"
+  min_sdk_android: 24
+  web:
+    generate: true
+    image_path: "assets/branding/app_icon.png"
+    background_color: "#4F46E5"
+    theme_color: "#4F46E5"
 
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/
     - assets/svg/
   fonts:
     - family: Poppins

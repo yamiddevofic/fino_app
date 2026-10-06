@@ -12,5 +12,6 @@ class Income extends FinanceRecord {
     super.note,
     super.done,
     super.pricePending,
+    super.expenseKey,
   });
 }

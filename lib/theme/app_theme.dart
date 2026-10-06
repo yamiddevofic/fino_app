@@ -72,6 +72,12 @@ class AppTokens extends ThemeExtension<AppTokens> {
   }
 }
 
+/// Color legible (blanco o casi negro) para texto o iconos sobre [background].
+Color onColor(Color background) =>
+    ThemeData.estimateBrightnessForColor(background) == Brightness.dark
+    ? Colors.white
+    : const Color(0xFF0E1116);
+
 /// Estilo para cifras: dígitos de ancho fijo para que no "bailen" al animar.
 const tabularFigures = [FontFeature.tabularFigures()];
 

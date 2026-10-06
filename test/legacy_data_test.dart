@@ -88,6 +88,7 @@ void main() {
     expect(newBuys[1].category, isNull);
     expect(debt.done, isTrue);
     expect(debt.note, isNull);
+    expect(debt.expenseKey, isNull);
 
     await Hive.close();
     await dir.delete(recursive: true);
