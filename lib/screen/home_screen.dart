@@ -1,4 +1,3 @@
-import 'package:fino_app/provider/buy_provider.dart';
 import 'package:fino_app/provider/expenses_provider.dart';
 import 'package:fino_app/provider/incomes_provider.dart';
 import 'package:fino_app/provider/debts_provider.dart';
@@ -43,7 +42,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final expenseProvider = Provider.of<ExpenseProvider>(context);
     final incomeProvider = Provider.of<IncomeProvider>(context);
-    final buyProvider = Provider.of<BuyProvider>(context);
     final debtProvider = Provider.of<DebtProvider>(context);
     final numberFormat = NumberFormat('#,##0.00', 'es_CO');
 
@@ -58,11 +56,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     double totalDebts = debtProvider.debts.fold(
-      0.0,
-      (sum, item) => sum + item.amount,
-    );
-
-    double totalBuys = buyProvider.buys.fold(
       0.0,
       (sum, item) => sum + item.amount,
     );

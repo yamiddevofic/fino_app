@@ -1,18 +1,30 @@
-# FINO - Tu Asistente para Listas de Compras
+# FINO - Tu Asistente de Finanzas Personales
 
-**FINO** es una aplicación multiplataforma desarrollada con Flutter que facilita la creación y gestión de listas de compras, ayudándote a organizar tus compras de manera eficiente y asegurando que no olvides ningún artículo importante.
+**FINO** es una aplicación multiplataforma desarrollada con Flutter para registrar tus ingresos, gastos, deudas y compras, y ver en todo momento cuánto dinero te queda. Todos los datos se guardan localmente en el dispositivo con [Hive](https://pub.dev/packages/hive).
 
 ## Características Principales
 
-- **Creación de Listas de Compras**: Añade productos a tus listas de manera rápida y sencilla, permitiendo una planificación efectiva de tus compras.
-- **Gestión de Categorías**: Organiza los artículos por categorías para facilitar la navegación y el proceso de compra en la tienda.
-- **Sincronización en Tiempo Real**: Comparte tus listas con familiares o amigos y manténlas actualizadas en todos los dispositivos.
-- **Historial de Compras**: Accede a un registro de tus compras anteriores para agilizar la creación de nuevas listas.
-- **Notificaciones y Recordatorios**: Recibe alertas para no olvidar realizar tus compras o añadir artículos pendientes.
+- **Resumen general (Home)**: Totales de ingresos, gastos y deudas, y un total general calculado como `ingresos - (gastos + deudas)`, expresado en pesos colombianos (COP).
+- **Ingresos**: Registra, edita y elimina tus fuentes de ingreso.
+- **Gastos**: Lleva el control de tus gastos con nombre y monto.
+- **Deudas**: Registra lo que debes para tenerlo en cuenta en tu balance.
+- **Compras**: Anota las compras que tienes pendientes o planeadas.
+- **Modo claro y oscuro**: Cambia el tema desde el interruptor en la barra superior.
+- **Almacenamiento local**: Sin cuentas ni conexión a internet; tus datos no salen del dispositivo.
+
+## Hoja de Ruta
+
+Ideas que aún **no** están implementadas:
+
+- Fechas y categorías en cada registro, con filtros por mes.
+- Gráficas de ingresos y gastos.
+- Marcar deudas como pagadas o registrar abonos parciales.
+- Recordar el tema elegido entre sesiones.
+- Exportar y respaldar los datos.
 
 ## Capturas de Pantalla
 
-*Incluye aquí imágenes representativas de la interfaz de la aplicación para ofrecer a los usuarios una vista previa visual.*
+*Próximamente.*
 
 ## Instalación
 
