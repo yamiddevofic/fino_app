@@ -52,7 +52,7 @@ Para probar **FINO** en tu dispositivo localmente, sigue estos pasos:
    flutter run
    ```
 
-**Nota**: Necesitas Flutter 3.35 o superior (el CI usa 3.47.6) y un dispositivo o emulador configurado.
+**Nota**: Necesitas Flutter 3.35 o superior (el CI usa 3.47.6), Java 17 y un dispositivo o emulador configurado.
 
 ## Desarrollo
 
@@ -62,7 +62,7 @@ flutter analyze        # análisis estático
 flutter test           # pruebas
 ```
 
-GitHub Actions ejecuta estos tres pasos y una compilación web en cada pull request.
+GitHub Actions ejecuta estos tres pasos en cada push, compila la versión web y genera una APK que se descarga desde la pestaña **Actions** (artefacto `fino-apk`).
 
 ### Estructura
 
