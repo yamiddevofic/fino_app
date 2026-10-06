@@ -10,5 +10,16 @@ class Debt {
   @HiveField(1)
   final double amount;
 
-  Debt({required this.name, required this.amount});
+  @HiveField(2)
+  final DateTime? date;
+
+  @HiveField(3)
+  final bool? isCancelled;
+
+  Debt({
+    required this.name,
+    required this.amount,
+    this.date,
+    this.isCancelled = false,
+  });
 }

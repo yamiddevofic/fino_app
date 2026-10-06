@@ -1,77 +1,119 @@
-# FINO - Tu Asistente de Finanzas Personales
+# FINO
 
-**FINO** es una aplicación multiplataforma desarrollada con Flutter para registrar tus ingresos, gastos, deudas y compras, y ver en todo momento cuánto dinero te queda. Todos los datos se guardan localmente en el dispositivo con [Hive](https://pub.dev/packages/hive).
+Aplicacion Flutter para registrar y consultar ingresos, gastos, deudas y
+compras desde un unico lugar. FINO funciona de forma local: los datos se
+persisten en el dispositivo mediante Hive y no requiere una cuenta ni un
+backend.
 
-## Características Principales
+## Funcionalidades
 
-- **Resumen general (Home)**: Totales de ingresos, gastos y deudas, y un total general calculado como `ingresos - (gastos + deudas)`, expresado en pesos colombianos (COP).
-- **Ingresos**: Registra, edita y elimina tus fuentes de ingreso.
-- **Gastos**: Lleva el control de tus gastos con nombre y monto.
-- **Deudas**: Registra lo que debes para tenerlo en cuenta en tu balance.
-- **Compras**: Anota las compras que tienes pendientes o planeadas.
-- **Modo claro y oscuro**: Cambia el tema desde el interruptor en la barra superior.
-- **Almacenamiento local**: Sin cuentas ni conexión a internet; tus datos no salen del dispositivo.
+- Resumen de ingresos, gastos y deudas en la pantalla de inicio.
+- Alta y eliminacion de ingresos.
+- Alta y eliminacion de gastos.
+- Alta y eliminacion de deudas.
+- Alta y eliminacion de compras.
+- Navegacion por pestañas entre las cinco secciones principales.
+- Tema claro y tema oscuro.
+- Persistencia local con cajas Hive tipadas.
 
-## Hoja de Ruta
+## Requisitos
 
-Ideas que aún **no** están implementadas:
+- Flutter instalado y configurado.
+- Dart incluido en la version de Flutter instalada.
+- Un dispositivo fisico, emulador o navegador compatible.
 
-- Fechas y categorías en cada registro, con filtros por mes.
-- Gráficas de ingresos y gastos.
-- Marcar deudas como pagadas o registrar abonos parciales.
-- Recordar el tema elegido entre sesiones.
-- Exportar y respaldar los datos.
+Comprueba el entorno con:
 
-## Capturas de Pantalla
+```bash
+flutter doctor
+flutter --version
+```
 
-*Próximamente.*
+## Instalacion
 
-## Instalación
+```bash
+git clone https://github.com/yamiddevofic/fino_app.git
+cd fino_app
+flutter pub get
+flutter run
+```
 
-Para probar **FINO** en tu dispositivo localmente, sigue estos pasos:
+Para elegir un dispositivo concreto:
 
-1. **Clonar el repositorio**:
+```bash
+flutter devices
+flutter run -d <device-id>
+```
 
-   ```bash
-   git clone https://github.com/yamiddevofic/fino_app.git
-   ```
+## Estructura del proyecto
 
-2. **Navegar al directorio del proyecto**:
+```text
+lib/
+  main.dart                 # Inicializacion de Hive, providers y aplicacion
+  models/                   # Modelos persistidos y adaptadores Hive
+  provider/                 # Estado y operaciones sobre las cajas Hive
+  screen/                  # Pantallas de la aplicacion
+test/                       # Pruebas automatizadas
+assets/                     # Iconos, tipografias y otros recursos
+```
 
-   ```bash
-   cd fino_app
-   ```
+La aplicacion se inicia desde `lib/main.dart`. Antes de montar la interfaz,
+registra los adaptadores, abre las cajas Hive y configura los providers con
+`MultiProvider`.
 
-3. **Instalar las dependencias**:
+## Persistencia
 
-   ```bash
-   flutter pub get
-   ```
+FINO utiliza las siguientes cajas locales:
 
-4. **Ejecutar la aplicación**:
+| Caja | Modelo |
+| --- | --- |
+| `incomesBox` | `Income` |
+| `expensesBox` | `Expense` |
+| `buysBox` | `Buy` |
+| `debtBox` | `Debt` |
 
-   ```bash
-   flutter run
-   ```
+Los datos permanecen en el dispositivo donde se ejecuta la aplicacion. No hay
+sincronizacion entre dispositivos, autenticacion ni almacenamiento remoto.
 
-**Nota**: Asegúrate de tener Flutter instalado en tu sistema y un dispositivo o emulador configurado para ejecutar la aplicación.
+## Comprobaciones de desarrollo
+
+Ejecuta estas comprobaciones antes de enviar cambios:
+
+```bash
+flutter analyze
+flutter test
+```
+
+Para regenerar los adaptadores de Hive despues de modificar un modelo:
+
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
+
+## Limitaciones conocidas
+
+- La persistencia es exclusivamente local y no incluye copias de seguridad en
+  un servidor.
+- No se incluyen autenticacion, sincronizacion remota, notificaciones ni
+  historial independiente de compras.
+- El repositorio no contiene actualmente un archivo `LICENSE`.
 
 ## Contribuciones
 
-¡Las contribuciones son bienvenidas! Si deseas colaborar en el desarrollo de FINO, por favor sigue estos pasos:
+1. Crea un fork del repositorio.
+2. Crea una rama descriptiva para tu cambio.
+3. Implementa el cambio respetando la arquitectura existente.
+4. Ejecuta `flutter analyze` y `flutter test`.
+5. Abre un Pull Request con el contexto, las comprobaciones ejecutadas y las
+   limitaciones relevantes.
 
-1. Haz fork del repositorio.
-2. Crea una nueva rama con una descripción clara de la funcionalidad o corrección que implementarás.
-3. Realiza tus cambios y asegúrate de que las pruebas existentes pasen correctamente.
-4. Envía un Pull Request detallando los cambios realizados.
+Consulta `AGENTS.md` para conocer las convenciones de trabajo del repositorio.
 
 ## Licencia
 
-Este proyecto está bajo la licencia MIT. Consulta el archivo LICENSE para más detalles.
+La licencia del proyecto aun no esta formalizada en un archivo del repositorio.
 
 ## Contacto
 
-Para más información o consultas, puedes contactarme a través de:
-
-- Correo Electrónico: contacto@yamid.dev
-- LinkedIn: [Yamid Horacio Rodríguez](https://www.linkedin.com/in/yamid-rodriguez)
+- GitHub: https://github.com/yamiddevofic/fino_app
+- LinkedIn: [Yamid Horacio Rodriguez](https://www.linkedin.com/in/yamid-rodriguez)

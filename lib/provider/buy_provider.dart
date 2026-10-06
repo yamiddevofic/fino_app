@@ -35,4 +35,20 @@ class BuyProvider with ChangeNotifier {
     _buys = _buyBox.values.toList();
     notifyListeners();
   }
+
+  Future<void> toggleBuyCompleted(int index) async {
+    final buy = _buys[index];
+    await updateBuy(
+      index,
+      buy.copyWith(isCompleted: !(buy.isCompleted ?? false)),
+    );
+  }
+
+  Future<void> updateBuyPrice(int index, double amount) async {
+    final buy = _buys[index];
+    await updateBuy(
+      index,
+      buy.copyWith(amount: amount, isPricePending: false),
+    );
+  }
 }

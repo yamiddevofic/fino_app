@@ -19,17 +19,26 @@ class BuyAdapter extends TypeAdapter<Buy> {
     return Buy(
       name: fields[0] as String,
       amount: fields[1] as double,
+      date: fields[2] as DateTime?,
+      isCompleted: fields[3] as bool?,
+      isPricePending: fields[4] as bool?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Buy obj) {
     writer
-      ..writeByte(2)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
-      ..write(obj.amount);
+      ..write(obj.amount)
+      ..writeByte(2)
+      ..write(obj.date)
+      ..writeByte(3)
+      ..write(obj.isCompleted)
+      ..writeByte(4)
+      ..write(obj.isPricePending);
   }
 
   @override

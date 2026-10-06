@@ -1,274 +1,315 @@
+import 'package:fino_app/app_colors.dart';
+import 'package:fino_app/provider/debts_provider.dart';
 import 'package:fino_app/provider/expenses_provider.dart';
 import 'package:fino_app/provider/incomes_provider.dart';
-import 'package:fino_app/provider/debts_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
-class HomeScreen extends StatefulWidget {
-  final Color color;
-  final List<Color> colors;
-  final Function(ThemeMode) changeTheme;
-  final ThemeMode modo;
-  const HomeScreen(
-      {super.key,
-      required this.color,
-      required this.colors,
-      required this.changeTheme,
-      required this.modo});
-
-  @override
-  _HomeScreenState createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  late ScrollController _scrollController;
-
-  @override
-  void initState() {
-    super.initState();
-    // Inicializar el ScrollController
-    _scrollController = ScrollController();
-  }
-
-  @override
-  void dispose() {
-    // Disponer el ScrollController
-    _scrollController.dispose();
-    super.dispose();
-  }
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final expenseProvider = Provider.of<ExpenseProvider>(context);
-    final incomeProvider = Provider.of<IncomeProvider>(context);
-    final debtProvider = Provider.of<DebtProvider>(context);
+    final incomes = context
+        .watch<IncomeProvider>()
+        .incomes
+        .fold<double>(0, (total, item) => total + item.amount);
+    final expenses = context
+        .watch<ExpenseProvider>()
+        .expenses
+        .fold<double>(0, (total, item) => total + item.amount);
+    final debtProvider = context.watch<DebtProvider>();
+    final debtsTotal = debtProvider.totalDebts;
+    final debtsPending = debtProvider.pendingTotal;
+    final hasPendingDebts = debtProvider.pendingCount > 0;
+    final balance = incomes - expenses - debtsTotal;
+    final theme = Theme.of(context);
+    final colors = AppColors.accents(theme.brightness);
+    final color = colors[AppSection.overview.index];
+    final muted = theme.colorScheme.onSurfaceVariant;
+    final foreground = AppColors.onAccent(color);
     final numberFormat = NumberFormat('#,##0.00', 'es_CO');
-
-    double totalExpenses = expenseProvider.expenses.fold(
-      0.0,
-      (sum, item) => sum + item.amount,
-    );
-
-    double totalIncomes = incomeProvider.incomes.fold(
-      0.0,
-      (sum, item) => sum + item.amount,
-    );
-
-    double totalDebts = debtProvider.debts.fold(
-      0.0,
-      (sum, item) => sum + item.amount,
-    );
-
-    double generalTotal = totalIncomes - (totalExpenses + totalDebts);
+    final message = _financialMessage(balance, hasPendingDebts);
 
     return Scaffold(
-      backgroundColor: widget.modo == ThemeMode.dark
-          ? const Color(0xFF070707)
-          : widget.color,
-      body: Padding(
-        padding:
-            const EdgeInsets.only(top: 10, bottom: 10, left: 20, right: 20),
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
         child: SingleChildScrollView(
-          controller: _scrollController,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.screen,
+            AppSpacing.lg,
+            AppSpacing.screen,
+            AppSpacing.xxl,
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('TU DINERO, EN ORDEN',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: muted,
+                        fontSize: 12,
+                        letterSpacing: 1.1,
+                      )),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Resumen financiero',
+                    style: theme.textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _BalanceCard(
+                    color: color,
+                    foreground: foreground,
+                    balance: balance,
+                    formattedBalance: numberFormat.format(balance),
+                    message: message,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  Text('Resumen por categoría',
+                      style: theme.textTheme.titleLarge),
+                  const SizedBox(height: AppSpacing.md),
+                  _MetricCard(
+                    category: 'Ingresos',
+                    amount: incomes,
+                    color: colors[1],
+                    icon: Icons.south_west_rounded,
+                  ),
+                  _MetricCard(
+                    category: 'Gastos',
+                    amount: expenses,
+                    color: colors[2],
+                    icon: Icons.north_east_rounded,
+                  ),
+                  _MetricCard(
+                    category: 'Deudas',
+                    amount: debtsTotal,
+                    color: colors[3],
+                    icon: Icons.account_balance_outlined,
+                    subtitle: debtsPending > 0
+                        ? 'Pendientes: ${numberFormat.format(debtsPending)}'
+                        : 'Todas al día',
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Totales acumulados de tus registros',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _financialMessage(double balance, bool hasPendingDebts) {
+    if (hasPendingDebts) return 'Tienes deudas pendientes';
+    if (balance > 0) return 'Buen momento, estás en positivo';
+    if (balance < 0) return 'Revisa tus gastos, estás en negativo';
+    return 'Estás en equilibrio, mantén el control';
+  }
+}
+
+class _BalanceCard extends StatelessWidget {
+  final Color color;
+  final Color foreground;
+  final double balance;
+  final String formattedBalance;
+  final String message;
+
+  const _BalanceCard({
+    required this.color,
+    required this.foreground,
+    required this.balance,
+    required this.formattedBalance,
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final positive = balance >= 0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(AppRadius.hero),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: .3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              AnimatedTargetTotals(
-                category: 'Ingresos',
-                amount: totalIncomes,
-                //color de acuerdo al modo
-                color: widget.colors[1],
-                modo: widget.modo,
+              Expanded(
+                child: Text(
+                  'Balance disponible',
+                  style: TextStyle(
+                    color: foreground.withValues(alpha: .85),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: .2,
+                  ),
+                ),
               ),
-              AnimatedTargetTotals(
-                category: 'Gastos',
-                amount: totalExpenses,
-                color: widget.colors[2],
-                modo: widget.modo,
+              Icon(Icons.account_balance_wallet_outlined,
+                  color: foreground, size: 24),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          SizedBox(
+            width: double.infinity,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'COP $formattedBalance',
+                style: TextStyle(
+                  color: foreground,
+                  fontSize: 36,
+                  height: 1.1,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -.5,
+                ),
               ),
-              AnimatedTargetTotals(
-                category: 'Deudas',
-                amount: totalDebts,
-                color: widget.colors[3],
-                modo: widget.modo,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            message,
+            style: TextStyle(
+              color: foreground.withValues(alpha: .9),
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            children: [
+              Icon(
+                positive ? Icons.trending_up_rounded : Icons.info_outline,
+                color: foreground.withValues(alpha: .85),
+                size: 18,
               ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: AnimatedCounter(
-                  value: generalTotal,
-                  builder: (context, value) {
-                    final generalTotalString = numberFormat.format(value);
-                    return Text(
-                      'Total general: COP $generalTotalString',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.bold,
-                      ),
-                    );
-                  },
-                  color: widget.color,
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                positive ? 'Balance positivo' : 'Balance por revisar',
+                style: TextStyle(
+                  color: foreground.withValues(alpha: .85),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-class AnimatedTargetTotals extends StatelessWidget {
-  const AnimatedTargetTotals({
-    super.key,
-    required this.category,
-    required this.color,
-    required this.amount,
-    required this.modo,
-  });
-
+class _MetricCard extends StatelessWidget {
   final String category;
-  final Color color;
   final double amount;
-  final ThemeMode modo;
+  final Color color;
+  final IconData icon;
+  final String? subtitle;
+
+  const _MetricCard({
+    required this.category,
+    required this.amount,
+    required this.color,
+    required this.icon,
+    this.subtitle,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 175,
-      child: Padding(
-        padding: const EdgeInsets.only(top: 20),
-        child: Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
-            side: BorderSide(
-              color: modo == ThemeMode.light ? Colors.white : color,
-              width: 2.0,
-            ),
+    final theme = Theme.of(context);
+    final amountText = NumberFormat('#,##0.00', 'es_CO').format(amount);
+    final foreground = AppColors.onAccent(color);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: .3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-          color: Theme.of(context).cardColor,
-          elevation: 8.0,
-          child: Padding(
-            padding:
-                const EdgeInsets.only(top: 0, bottom: 10, left: 10, right: 10),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: foreground.withValues(alpha: .15),
+              borderRadius: BorderRadius.circular(AppRadius.control),
+            ),
+            child: Icon(icon, color: foreground, size: 22),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   category,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: foreground,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Total:',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins',
-                      ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    subtitle!,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: foreground.withValues(alpha: .8),
+                      fontSize: 11,
                     ),
-                    AnimatedCounter(
-                      value: amount,
-                      builder: (context, value) {
-                        final numberFormat = NumberFormat('#,##0.00', 'es_CO');
-                        final totalAmountString = numberFormat.format(value);
-                        return Text(
-                          'COP $totalAmountString',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Poppins',
-                            color: color,
-                          ),
-                        );
-                      },
-                      color: color,
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ],
             ),
           ),
-        ),
+          const SizedBox(width: AppSpacing.sm),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 160),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(
+                'COP $amountText',
+                textAlign: TextAlign.right,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: foreground,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
-  }
-}
-
-class AnimatedCounter extends StatefulWidget {
-  const AnimatedCounter({
-    super.key,
-    required this.value,
-    required this.builder,
-    required color,
-  });
-
-  final double value;
-  final Widget Function(BuildContext, double) builder;
-
-  @override
-  _AnimatedCounterState createState() => _AnimatedCounterState();
-}
-
-class _AnimatedCounterState extends State<AnimatedCounter>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    );
-    _animation = Tween<double>(
-      begin: 0,
-      end: widget.value,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    ))
-      ..addListener(() {
-        setState(() {});
-      });
-    _controller.forward();
-  }
-
-  @override
-  void didUpdateWidget(covariant AnimatedCounter oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.value != widget.value) {
-      _controller.reset();
-      _animation = Tween<double>(
-        begin: _animation.value,
-        end: widget.value,
-      ).animate(CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeOut,
-      ));
-      _controller.forward();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return widget.builder(context, _animation.value);
   }
 }

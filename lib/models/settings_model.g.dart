@@ -1,38 +1,32 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'incomes_model.dart';
+part of 'settings_model.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class IncomeAdapter extends TypeAdapter<Income> {
+class SettingsAdapter extends TypeAdapter<Settings> {
   @override
-  final int typeId = 1;
+  final int typeId = 5;
 
   @override
-  Income read(BinaryReader reader) {
+  Settings read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return Income(
-      name: fields[0] as String,
-      amount: fields[1] as double,
-      date: fields[2] as DateTime?,
+    return Settings(
+      isDarkMode: fields[0] as bool,
     );
   }
 
   @override
-  void write(BinaryWriter writer, Income obj) {
+  void write(BinaryWriter writer, Settings obj) {
     writer
-      ..writeByte(3)
-      ..writeByte(0)
-      ..write(obj.name)
       ..writeByte(1)
-      ..write(obj.amount)
-      ..writeByte(2)
-      ..write(obj.date);
+      ..writeByte(0)
+      ..write(obj.isDarkMode);
   }
 
   @override
@@ -41,7 +35,7 @@ class IncomeAdapter extends TypeAdapter<Income> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is IncomeAdapter &&
+      other is SettingsAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

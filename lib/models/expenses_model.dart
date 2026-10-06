@@ -10,5 +10,8 @@ class Expense {
   @HiveField(1)
   final double amount;
 
-  Expense({required this.name, required this.amount});
+  @HiveField(2)
+  final DateTime? date;
+
+  Expense({required this.name, required this.amount, this.date});
 }

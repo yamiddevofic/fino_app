@@ -1,157 +1,41 @@
+import 'package:fino_app/app_colors.dart';
 import 'package:fino_app/models/buys_model.dart';
 import 'package:fino_app/provider/buy_provider.dart';
+import 'package:fino_app/widgets/finance_entry_page.dart';
+import 'package:fino_app/widgets/history_list.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 
-class BuysScreen extends StatefulWidget {
-  final Color color;
-  final Function(ThemeMode) changeTheme;
-  final ThemeMode modo;
-  const BuysScreen({super.key, required this.color, required this.changeTheme, required this.modo});
-  @override
-  _BuysScreenState createState() => _BuysScreenState();
-}
-
-class _BuysScreenState extends State<BuysScreen> {
-  final _formKey = GlobalKey<FormState>();
-  String _buyName = '';
-  double _buyAmount = 0.0;
-
-  void sendBuy() {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-
-      Provider.of<BuyProvider>(context, listen: false).addBuy(
-        Buy(name: _buyName, amount: _buyAmount),
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Colors.red,
-          content: Text(
-            'Compra agregada exitosamente',
-            style: TextStyle(color: Colors.white, fontSize: 20),
-          ),
-        ),
-      );
-
-      _formKey.currentState!.reset();
-      setState(() {
-        _buyName = '';
-        _buyAmount = 0.0;
-      });
-    }
-  }
-
-  void viewBuys() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const BuysListScreen(),
-      ),
-    );
-  }
+class BuysScreen extends StatelessWidget {
+  const BuysScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: widget.modo == ThemeMode.dark ? const Color(0xFF070707) : widget.color,
-      body: Container(
-        width: double.infinity,
-          height: double.infinity,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: widget.color,
-              width: 8.0,
-              style: BorderStyle.solid,
-            ),
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(30),
-              child: Card(
-                elevation: 4,
-                color: widget.modo == ThemeMode.dark ? const Color(0xFF070707) : Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  side: BorderSide(
-                    color: widget.color,
-                    width: 2.0,
-                    style: BorderStyle.solid,
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        const Text(
-                          'Agregar Compra',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Poppins',
-                          ),
-                        ),
-                        TextFormField(
-                          decoration: const InputDecoration(labelText: 'Nombre'),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Por favor, ingrese un nombre';
-                            }
-                            return null;
-                          },
-                          onSaved: (value) {
-                            _buyName = value!;
-                          },
-                        ),
-                        TextFormField(
-                          decoration: const InputDecoration(labelText: 'Monto'),
-                          keyboardType: TextInputType.number,
-                          validator: (value) {
-                            if (value == null ||
-                                value.isEmpty ||
-                                double.tryParse(value) == null ||
-                                double.parse(value) <= 0) {
-                              return 'Por favor, ingrese un monto válido';
-                            }
-                            return null;
-                          },
-                          onSaved: (value) {
-                            _buyAmount = double.parse(value!);
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: const Color(0xFF6BC714),
-                          ),
-                          onPressed: sendBuy,
-                          child: const Text('Agregar Compra'),
-                        ),
-                        const SizedBox(height: 10),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: Colors.blue,
-                          ),
-                          onPressed: viewBuys,
-                          child: const Text('Ver Compras'),
-                        ),
-                      ],
-                    ),
-                  ),
+    final accent = AppColors.forSection(
+      AppSection.purchase,
+      Theme.of(context).brightness,
+    );
+
+    return FinanceEntryPage(
+      title: 'Nueva compra',
+      description: 'Anota lo que planeas comprar y su valor.',
+      entryType: 'la compra',
+      successMessage: 'Compra agregada exitosamente',
+      accentColor: accent,
+      icon: Icons.shopping_bag_outlined,
+      allowPendingPrice: true,
+      onSave: (name, amount, {bool isPricePending = false}) =>
+          context.read<BuyProvider>().addBuy(
+                Buy(
+                  name: name,
+                  amount: amount,
+                  date: DateTime.now(),
+                  isPricePending: isPricePending,
                 ),
               ),
-            ),
-          ),
+      onShowHistory: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const BuysListScreen(),
         ),
       ),
     );
@@ -163,64 +47,35 @@ class BuysListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final buys = Provider.of<BuyProvider>(context).buys;
-    final numberFormat = NumberFormat('#,##0.00', 'es_CO');
+    final buys = context.watch<BuyProvider>().buys;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Lista de Compras'),
-      ),
-      body: ListView.builder(
-        itemCount: buys.length,
-        itemBuilder: (context, index) {
-          final buy = buys[index];
-          return Card(
-            child: ListTile(
-              title: Text(buy.name),
-              subtitle: Text(
-                'Monto: \$${numberFormat.format(buy.amount)}',
-                style: const TextStyle(fontSize: 18),
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) {
-                      return AlertDialog(
-                        title: const Text('Eliminar Compra'),
-                        content: const Text(
-                            '¿Estás seguro de que deseas eliminar este compra?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            child: const Text('Cancelar'),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              Provider.of<BuyProvider>(context,
-                                      listen: false)
-                                  .deleteBuy(index);
-                              ScaffoldMessenger.of(context)
-                                  .showSnackBar(const SnackBar(
-                                      backgroundColor: Colors.red,
-                                      content: Text(
-                                        'Compra eliminado exitosamente',
-                                      )));
-                            },
-                            child: const Text('Eliminar'),
-                          ),
-                        ],
-                      );
-                    });
-                },
-              ),
+      appBar: AppBar(title: const Text('Historial de compras')),
+      body: HistoryList(
+        entries: [
+          for (var index = 0; index < buys.length; index++)
+            HistoryEntry(
+              title: buys[index].name,
+              amount: buys[index].amount,
+              date: buys[index].date,
+              index: index,
+              isCompleted: buys[index].isCompleted,
+              isPricePending: buys[index].isPricePendingValue,
             ),
-          );
-        },
+        ],
+        accentColor: AppColors.forSection(
+          AppSection.purchase,
+          Theme.of(context).brightness,
+        ),
+        emptyMessage: 'Aún no tienes compras registradas.',
+        deleteTitle: 'Eliminar compra',
+        deleteMessage: '¿Quieres eliminar esta compra del historial?',
+        deletedMessage: 'Compra eliminada',
+        onDelete: (index) => context.read<BuyProvider>().deleteBuy(index),
+        onToggleCompleted: (index) =>
+            context.read<BuyProvider>().toggleBuyCompleted(index),
+        onUpdatePrice: (index, amount) =>
+            context.read<BuyProvider>().updateBuyPrice(index, amount),
       ),
     );
   }
