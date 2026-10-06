@@ -4,20 +4,18 @@
 
 ## Características Principales
 
-- **Resumen general (Home)**: Totales de ingresos, gastos y deudas, y un total general calculado como `ingresos - (gastos + deudas)`, expresado en pesos colombianos (COP).
-- **Ingresos**: Registra, edita y elimina tus fuentes de ingreso.
-- **Gastos**: Lleva el control de tus gastos con nombre y monto.
-- **Deudas**: Registra lo que debes para tenerlo en cuenta en tu balance.
-- **Compras**: Anota las compras que tienes pendientes o planeadas.
-- **Modo claro y oscuro**: Cambia el tema desde el interruptor en la barra superior.
+- **Resumen**: Balance general (`ingresos − (gastos + deudas)`) con un anillo que indica qué parte de los ingresos ya está comprometida, desglose por sección, gráfica de ingresos y gastos de los últimos 6 meses y movimientos recientes.
+- **Ingresos, gastos, deudas y compras**: Cada registro tiene monto, descripción, categoría, fecha y una nota opcional. Toca un registro para editarlo y deslízalo a la izquierda para borrarlo (con opción de deshacer).
+- **Filtro por mes**: Cada sección muestra el total del mes elegido.
+- **Montos en pesos colombianos**: Acepta `1.500.000`, `1500,50` o `$ 20.000`.
+- **Modo claro y oscuro**: Sigue el tema del sistema; se puede cambiar desde la barra superior.
+- **Diseño para móvil**: Navegación inferior, fondo animado sutil e ilustraciones SVG. Las animaciones se desactivan si el sistema pide reducir el movimiento.
 - **Almacenamiento local**: Sin cuentas ni conexión a internet; tus datos no salen del dispositivo.
 
 ## Hoja de Ruta
 
 Ideas que aún **no** están implementadas:
 
-- Fechas y categorías en cada registro, con filtros por mes.
-- Gráficas de ingresos y gastos.
 - Marcar deudas como pagadas o registrar abonos parciales.
 - Recordar el tema elegido entre sesiones.
 - Exportar y respaldar los datos.
@@ -54,7 +52,24 @@ Para probar **FINO** en tu dispositivo localmente, sigue estos pasos:
    flutter run
    ```
 
-**Nota**: Asegúrate de tener Flutter instalado en tu sistema y un dispositivo o emulador configurado para ejecutar la aplicación.
+**Nota**: Necesitas Flutter 3.35 o superior (el CI usa 3.47.6) y un dispositivo o emulador configurado.
+
+## Desarrollo
+
+```bash
+dart format lib test   # formato
+flutter analyze        # análisis estático
+flutter test           # pruebas
+```
+
+GitHub Actions ejecuta estos tres pasos y una compilación web en cada pull request.
+
+### Estructura
+
+- `lib/models/`: `FinanceRecord` (base común y adaptador de Hive), un modelo por sección y `RecordKind` con los textos, colores y categorías de cada sección.
+- `lib/provider/record_provider.dart`: provider genérico sobre una caja de Hive.
+- `lib/screen/records_screen.dart`: pantalla común de las cuatro secciones.
+- `lib/theme/`, `lib/widgets/`: sistema de diseño, gráficas y componentes animados.
 
 ## Contribuciones
 
