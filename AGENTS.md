@@ -33,6 +33,9 @@ La aplicacion no tiene backend ni sincronizacion remota.
   `lib/models/finance_record.dart`, con la tabla de campos. Para un campo
   nuevo usa un numero libre y agrega una prueba en `test/legacy_data_test.dart`.
   `settings_model.g.dart` sigue siendo generado.
+- Las deudas y compras pendientes no afectan el balance; al marcarlas como
+  listas `toggleSettled` (`lib/provider/settlement.dart`) registra el gasto.
+  No sumes deudas ni compras directamente al balance.
 - Registra nuevas cajas y adaptadores en `lib/main.dart` cuando corresponda.
 - Usa nombres descriptivos y comentarios solo cuando aclaren una decision o
   una parte no obvia del codigo.
