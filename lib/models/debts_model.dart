@@ -1,14 +1,14 @@
-import 'package:hive/hive.dart';
+import 'package:fino_app/models/finance_record.dart';
 
 part 'debts_model.g.dart';
 
-@HiveType(typeId: 3)
-class Debt {
-  @HiveField(0)
-  final String name;
-
-  @HiveField(1)
-  final double amount;
-
-  Debt({required this.name, required this.amount});
+/// Un deuda registrado por el usuario.
+class Debt extends FinanceRecord {
+  Debt({
+    required super.name,
+    required super.amount,
+    super.date,
+    super.category,
+    super.note,
+  });
 }

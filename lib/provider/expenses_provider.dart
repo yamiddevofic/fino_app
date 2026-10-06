@@ -1,38 +1,7 @@
-import 'package:flutter/foundation.dart';
-import 'package:hive/hive.dart';
-import '../models/expenses_model.dart';
+import 'package:fino_app/models/expenses_model.dart';
+import 'package:fino_app/models/record_kind.dart';
+import 'package:fino_app/provider/record_provider.dart';
 
-class ExpenseProvider with ChangeNotifier {
-  final _expenseBox = Hive.box<Expense>('expensesBox');
-
-  List<Expense> _expenses = [];
-
-  List<Expense> get expenses => _expenses;
-
-  ExpenseProvider() {
-    _loadExpenses();
-  }
-
-  void _loadExpenses() {
-    _expenses = _expenseBox.values.toList();
-    notifyListeners();
-  }
-
-  Future<void> addExpense(Expense expense) async {
-    await _expenseBox.add(expense);
-    _expenses = _expenseBox.values.toList();
-    notifyListeners();
-  }
-
-  Future<void> deleteExpense(int index) async {
-    await _expenseBox.deleteAt(index);
-    _expenses = _expenseBox.values.toList();
-    notifyListeners();
-  }
-
-  Future<void> updateExpense(int index, Expense updatedExpense) async {
-    await _expenseBox.putAt(index, updatedExpense);
-    _expenses = _expenseBox.values.toList();
-    notifyListeners();
-  }
+class ExpenseProvider extends RecordProvider<Expense> {
+  ExpenseProvider() : super(RecordKind.expense.boxName, Expense.new);
 }

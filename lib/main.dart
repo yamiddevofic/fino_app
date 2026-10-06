@@ -1,325 +1,308 @@
+import 'dart:ui' show ImageFilter;
+
+import 'package:fino_app/models/buys_model.dart';
+import 'package:fino_app/models/debts_model.dart';
+import 'package:fino_app/models/expenses_model.dart';
+import 'package:fino_app/models/incomes_model.dart';
+import 'package:fino_app/models/record_kind.dart';
 import 'package:fino_app/provider/buy_provider.dart';
+import 'package:fino_app/provider/debts_provider.dart';
 import 'package:fino_app/provider/expenses_provider.dart';
 import 'package:fino_app/provider/incomes_provider.dart';
-import 'package:fino_app/provider/debts_provider.dart';
+import 'package:fino_app/provider/record_provider.dart';
 import 'package:fino_app/screen/buys_screen.dart';
 import 'package:fino_app/screen/debt_screen.dart';
 import 'package:fino_app/screen/expenses_screen.dart';
 import 'package:fino_app/screen/home_screen.dart';
 import 'package:fino_app/screen/incomes_screen.dart';
+import 'package:fino_app/theme/app_theme.dart';
+import 'package:fino_app/widgets/animated_background.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:fino_app/models/incomes_model.dart';
-import 'package:fino_app/models/expenses_model.dart';
-import 'package:fino_app/models/buys_model.dart';
-import 'package:fino_app/models/debts_model.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
-// Otras importaciones se mantienen
-
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('es');
+  await initializeDateFormatting('es_CO');
 
-  // Inicializa Hive y registra adaptadores
   await Hive.initFlutter();
+  registerAdapters();
+  await openBoxes();
+
+  runApp(const AppProviders(child: FinoApp()));
+}
+
+void registerAdapters() {
   Hive.registerAdapter(IncomeAdapter());
   Hive.registerAdapter(ExpenseAdapter());
   Hive.registerAdapter(BuyAdapter());
   Hive.registerAdapter(DebtAdapter());
+}
 
-  // Abre las cajas necesarias
-  await Hive.openBox<Income>('incomesBox');
-  await Hive.openBox<Expense>('expensesBox');
-  await Hive.openBox<Buy>('buysBox');
-  await Hive.openBox<Debt>('debtBox');
+Future<void> openBoxes() async {
+  await Hive.openBox<Income>(RecordKind.income.boxName);
+  await Hive.openBox<Expense>(RecordKind.expense.boxName);
+  await Hive.openBox<Buy>(RecordKind.buy.boxName);
+  await Hive.openBox<Debt>(RecordKind.debt.boxName);
+}
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => IncomeProvider()),
-        ChangeNotifierProvider(create: (_) => ExpenseProvider()),
-        ChangeNotifierProvider(create: (_) => BuyProvider()),
-        ChangeNotifierProvider(create: (_) => DebtProvider()),
-      ],
-      child: finoApp(),
-    ),
+/// Registra un provider por tipo de registro. Las cajas de Hive deben estar
+/// abiertas antes.
+class AppProviders extends StatelessWidget {
+  const AppProviders({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => MultiProvider(
+    providers: [
+      ChangeNotifierProvider<RecordProvider<Income>>(
+        create: (_) => IncomeProvider(),
+      ),
+      ChangeNotifierProvider<RecordProvider<Expense>>(
+        create: (_) => ExpenseProvider(),
+      ),
+      ChangeNotifierProvider<RecordProvider<Buy>>(create: (_) => BuyProvider()),
+      ChangeNotifierProvider<RecordProvider<Debt>>(
+        create: (_) => DebtProvider(),
+      ),
+    ],
+    child: child,
   );
 }
 
-class finoApp extends StatefulWidget {
-  const finoApp({super.key});
+class FinoApp extends StatefulWidget {
+  const FinoApp({super.key});
 
   @override
-  _FinoAppState createState() => _FinoAppState();
+  State<FinoApp> createState() => _FinoAppState();
 }
 
-class _FinoAppState extends State<finoApp> with SingleTickerProviderStateMixin {
-  late TabController _tabController; // Controlador para el TabBar
-  Color backgroundColor = Color(0xFFADADAD);
-  late PageController _pageController;
-  ThemeMode _modoTema = ThemeMode.light;
-
-  bool get esOscuro => _modoTema == ThemeMode.dark;
-  List<Color> get currentColors => esOscuro ? colorsDark : colorsLight;
-
-  // Colores para el modo claro
-  final List<Color> colorsLight = [
-    const Color(0xFF36A0DD), // HomeScreen
-    const Color(0xFF28A745), // IncomesScreen
-    const Color(0xFFE70000), // ExpensesScreen
-    const Color(0xFF2C89DB), // DebtsScreen
-    const Color(0xFFEC9128), // BuysScreen
-  ];
-
-// Colores para el modo oscuro
-  final List<Color> colorsDark = [
-    const Color(0xFFC2C2C2), // HomeScreen
-    const Color(0xFF86FF05), // IncomesScreen
-    const Color(0xFFE70000), // ExpensesScreen
-    const Color(0xFF00C8FF), // DebtsScreen
-    const Color(0xFFFFD900), // BuysScreen
-  ];
-
-  final ThemeData temaClaro = ThemeData(
-      brightness: Brightness.light,
-      primaryColor: Colors.white,
-      hintColor: Colors.blue,
-      appBarTheme: AppBarTheme(
-        backgroundColor: Colors.white,
-      ),
-      tabBarTheme: TabBarTheme(
-          labelColor: Color(0xFFFFFEFE),
-          unselectedLabelColor: Color(0xFF161616)),
-      iconTheme: IconThemeData(
-        color: Colors.black,
-      ),
-      cardColor: Colors.white,
-      textTheme: TextTheme(
-        bodyLarge: TextStyle(color: const Color(0xFF131212)),
-      ));
-
-  final ThemeData temaOscuro = ThemeData(
-      brightness: Brightness.dark,
-      primaryColor: Colors.black,
-      hintColor: Colors.blueAccent,
-      appBarTheme: AppBarTheme(
-        backgroundColor: Colors.black,
-      ),
-      tabBarTheme: TabBarTheme(
-          labelColor: const Color(0xFF000000),
-          unselectedLabelColor: Colors.white),
-      iconTheme: IconThemeData(
-        color: const Color(0xFF000000),
-      ),
-      cardColor: Color(0xFF070707),
-      textTheme: TextTheme(
-        bodyLarge: TextStyle(color: Colors.white),
-      ));
-
-  void _changeTheme(ThemeMode modo) {
-    setState(() {
-      _modoTema = modo;
-      backgroundColor = currentColors[_tabController.index];
-    });
-  }
+class _FinoAppState extends State<FinoApp> {
+  ThemeMode _themeMode = ThemeMode.system;
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 5, vsync: this);
-    _pageController = PageController(initialPage: _tabController.index);
-
-    // Asegura que el color de fondo esté sincronizado al iniciar la app
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _updateBackgroundColor(_tabController.index);
-    });
-
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) {
-        // Usa jumpToPage directamente para asegurar movimiento inmediato.
-        _pageController.jumpToPage(_tabController.index);
-        _updateBackgroundColor(_tabController.index);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  void _updateBackgroundColor(int index) {
-    setState(() {
-      backgroundColor = currentColors[index];
-    });
-  }
-
-  @override
-  Widget build(BuildContext contex) {
+  Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Fino App',
-      home: Builder(
-          builder: (context) => DefaultTabController(
-              length: 5,
-              child: Scaffold(
-                appBar: AppBar(
-                  title: Text(
-                    'Fino App',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Poppins',
-                      fontStyle: FontStyle.normal,
-                      color: currentColors[_tabController.index],
-                    ),
-                  ),
-                  backgroundColor:
-                      Theme.of(context).appBarTheme.backgroundColor,
-                  centerTitle: true,
-                  bottom: TabBar(
-                    controller: _tabController,
-                    labelColor: _tabController.index == 0 && esOscuro
-                        ? Colors.white
-                        : Theme.of(context).tabBarTheme.labelColor,
-                    unselectedLabelColor:
-                        Theme.of(context).tabBarTheme.unselectedLabelColor,
-                    isScrollable: true,
-                    indicatorSize: TabBarIndicatorSize.label,
-                    indicator: BoxDecoration(
-                      color: _tabController.index == 0 && esOscuro
-                          ? const Color.fromARGB(255, 124, 124, 124)
-                          : backgroundColor,
-                      borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(10),
-                          topRight: Radius.circular(10)),
-                    ),
-                    indicatorPadding: EdgeInsets.only(left: -4, right: -4),
-                    tabs: [
-                      Tab(
-                        icon: Icon(
-                          Icons.home,
-                          color: _tabController.index == 0
-                              ? (esOscuro
-                                  ? const Color.fromARGB(255, 255, 255, 255)
-                                  : const Color.fromARGB(255, 255, 255, 255))
-                              : (esOscuro
-                                  ? const Color(0xFFBDBDBD)
-                                  : const Color(0xFF7E7E7E)),
-                        ),
-                        text: 'Home',
-                        iconMargin: const EdgeInsets.only(left: 10, right: 10),
-                        key: const ValueKey('home'),
-                      ),
-                      Tab(
-                        icon: Icon(
-                          Icons.input_outlined,
-                          color: _tabController.index == 1
-                              ? (esOscuro
-                                  ? const Color(0xFF000000)
-                                  : const Color(0xFFFFFFFF))
-                              : (esOscuro
-                                  ? const Color(0xFFF0F0F0)
-                                  : const Color(0xFF7E7E7E)),
-                        ),
-                        text: 'Ingresos',
-                        key: const ValueKey('incomes'),
-                      ),
-                      Tab(
-                        icon: Icon(
-                          Icons.output_outlined,
-                          color: _tabController.index == 2
-                              ? (esOscuro
-                                  ? const Color.fromARGB(255, 0, 0, 0)
-                                  : const Color.fromARGB(255, 255, 255, 255))
-                              : (esOscuro
-                                  ? const Color(0xFFBDBDBD)
-                                  : const Color(0xFF7E7E7E)),
-                        ),
-                        text: 'Gastos',
-                        key: ValueKey('expenses'),
-                      ),
-                      Tab(
-                        icon: Icon(
-                          Icons.warning_outlined,
-                          color: _tabController.index == 3
-                              ? (esOscuro
-                                  ? const Color.fromARGB(255, 0, 0, 0)
-                                  : const Color.fromARGB(255, 255, 255, 255))
-                              : (esOscuro
-                                  ? const Color(0xFFBDBDBD)
-                                  : const Color(0xFF7E7E7E)),
-                        ),
-                        text: 'Deudas',
-                        iconMargin: EdgeInsets.all(5),
-                        key: ValueKey('debts'),
-                      ),
-                      Tab(
-                        icon: Icon(
-                          Icons.shopping_cart_outlined,
-                          color: _tabController.index == 4
-                              ? (esOscuro
-                                  ? const Color.fromARGB(255, 0, 0, 0)
-                                  : const Color.fromARGB(255, 255, 255, 255))
-                              : (esOscuro
-                                  ? const Color(0xFFBDBDBD)
-                                  : const Color(0xFF7E7E7E)),
-                        ),
-                        text: 'Compras',
-                        iconMargin: EdgeInsets.all(5),
-                        key: ValueKey('buys'),
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    Switch(
-                      value: esOscuro,
-                      onChanged: (bool valor) {
-                        _changeTheme(valor ? ThemeMode.dark : ThemeMode.light);
-                      },
-                      activeColor: Colors.white,
-                      activeTrackColor: const Color(0xFF181818),
-                      inactiveThumbColor: Colors.white,
-                      inactiveTrackColor: Colors.grey,
-                    ),
-                  ],
-                ),
-                body: PageView(
-                  controller: _pageController,
-                  children: [
-                    HomeScreen(
-                        color: currentColors[0],
-                        colors: currentColors,
-                        changeTheme: _changeTheme,
-                        modo: _modoTema),
-                    IncomesScreen(
-                        color: currentColors[1],
-                        changeTheme: _changeTheme,
-                        modo: _modoTema),
-                    ExpensesScreen(
-                        color: currentColors[2],
-                        changeTheme: _changeTheme,
-                        modo: _modoTema),
-                    DebtsScreen(
-                        color: currentColors[3],
-                        changeTheme: _changeTheme,
-                        modo: _modoTema),
-                    BuysScreen(
-                        color: currentColors[4],
-                        changeTheme: _changeTheme,
-                        modo: _modoTema),
-                  ],
-                  onPageChanged: (index) {
-                    _tabController.animateTo(index);
-                    _updateBackgroundColor(index);
-                  },
-                ),
-              ))),
+      title: 'Fino',
       debugShowCheckedModeBanner: false,
-      theme: temaClaro,
-      darkTheme: temaOscuro,
-      themeMode: _modoTema,
+      theme: buildTheme(Brightness.light),
+      darkTheme: buildTheme(Brightness.dark),
+      themeMode: _themeMode,
+      locale: const Locale('es', 'CO'),
+      supportedLocales: const [Locale('es', 'CO'), Locale('es')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      home: HomeShell(
+        onToggleTheme: (isDark) => setState(
+          () => _themeMode = isDark ? ThemeMode.light : ThemeMode.dark,
+        ),
+      ),
+    );
+  }
+}
+
+class _Destination {
+  const _Destination(this.label, this.icon, this.selectedIcon, this.kind);
+
+  final String label;
+  final IconData icon;
+  final IconData selectedIcon;
+  final RecordKind? kind;
+}
+
+const _destinations = [
+  _Destination(
+    'Inicio',
+    Icons.space_dashboard_outlined,
+    Icons.space_dashboard_rounded,
+    null,
+  ),
+  _Destination(
+    'Ingresos',
+    Icons.south_west_rounded,
+    Icons.south_west_rounded,
+    RecordKind.income,
+  ),
+  _Destination(
+    'Gastos',
+    Icons.north_east_rounded,
+    Icons.north_east_rounded,
+    RecordKind.expense,
+  ),
+  _Destination(
+    'Deudas',
+    Icons.account_balance_outlined,
+    Icons.account_balance_rounded,
+    RecordKind.debt,
+  ),
+  _Destination(
+    'Compras',
+    Icons.shopping_bag_outlined,
+    Icons.shopping_bag_rounded,
+    RecordKind.buy,
+  ),
+];
+
+/// Estructura principal: barra superior, fondo animado, contenido de la
+/// pestaña activa y navegación inferior.
+class HomeShell extends StatefulWidget {
+  const HomeShell({super.key, required this.onToggleTheme});
+
+  /// Recibe si el tema actual es oscuro.
+  final ValueChanged<bool> onToggleTheme;
+
+  @override
+  State<HomeShell> createState() => _HomeShellState();
+}
+
+class _HomeShellState extends State<HomeShell> {
+  int _index = 0;
+
+  void _select(int index) => setState(() => _index = index);
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = AppTokens.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final kind = _destinations[_index].kind;
+    final accent = kind?.accent(context) ?? tokens.brand;
+
+    final pages = [
+      HomeScreen(
+        onOpenSection: (k) =>
+            _select(_destinations.indexWhere((d) => d.kind == k)),
+      ),
+      const IncomesScreen(),
+      const ExpensesScreen(),
+      const DebtsScreen(),
+      const BuysScreen(),
+    ];
+
+    return Scaffold(
+      extendBody: true,
+      body: AnimatedBackground(
+        accent: accent,
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              _TopBar(
+                title: kind?.title ?? 'Resumen',
+                isDark: isDark,
+                onToggleTheme: () => widget.onToggleTheme(isDark),
+              ),
+              Expanded(
+                child: TweenAnimationBuilder<double>(
+                  key: ValueKey(_index),
+                  tween: Tween(begin: 0, end: 1),
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, t, child) => Opacity(
+                    opacity: t,
+                    child: Transform.translate(
+                      offset: Offset(0, 10 * (1 - t)),
+                      child: child,
+                    ),
+                  ),
+                  child: IndexedStack(index: _index, children: pages),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      // Barra translúcida con desenfoque: el contenido se intuye por debajo
+      // sin competir con la navegación.
+      bottomNavigationBar: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: tokens.border)),
+            ),
+            child: NavigationBar(
+              selectedIndex: _index,
+              onDestinationSelected: _select,
+              indicatorColor: accent.withValues(alpha: 0.16),
+              destinations: [
+                for (final d in _destinations)
+                  NavigationDestination(
+                    icon: Icon(d.icon, color: tokens.textMuted),
+                    selectedIcon: Icon(d.selectedIcon, color: accent),
+                    label: d.label,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TopBar extends StatelessWidget {
+  const _TopBar({
+    required this.title,
+    required this.isDark,
+    required this.onToggleTheme,
+  });
+
+  final String title;
+  final bool isDark;
+  final VoidCallback onToggleTheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = AppTokens.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
+      child: Row(
+        children: [
+          SvgPicture.asset(
+            'assets/svg/logo.svg',
+            width: 32,
+            height: 32,
+            theme: SvgTheme(currentColor: tokens.brand),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              layoutBuilder: (current, previous) => Stack(
+                alignment: Alignment.centerLeft,
+                children: [...previous, ?current],
+              ),
+              transitionBuilder: (child, animation) =>
+                  FadeTransition(opacity: animation, child: child),
+              child: Text(
+                title,
+                key: ValueKey(title),
+                style: Theme.of(context).appBarTheme.titleTextStyle,
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: isDark ? 'Modo claro' : 'Modo oscuro',
+            onPressed: onToggleTheme,
+            icon: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (child, animation) => RotationTransition(
+                turns: Tween(begin: 0.75, end: 1.0).animate(animation),
+                child: FadeTransition(opacity: animation, child: child),
+              ),
+              child: Icon(
+                isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                key: ValueKey(isDark),
+                color: tokens.textMuted,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

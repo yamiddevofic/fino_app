@@ -1,107 +1,106 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:fino_app/main.dart';
 import 'package:fino_app/models/buys_model.dart';
 import 'package:fino_app/models/debts_model.dart';
 import 'package:fino_app/models/expenses_model.dart';
 import 'package:fino_app/models/incomes_model.dart';
-import 'package:fino_app/provider/buy_provider.dart';
-import 'package:fino_app/provider/debts_provider.dart';
-import 'package:fino_app/provider/expenses_provider.dart';
-import 'package:fino_app/provider/incomes_provider.dart';
+import 'package:fino_app/models/record_kind.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
-import 'package:provider/provider.dart';
+import 'package:intl/date_symbol_data_local.dart';
+
+/// Avanza el reloj lo suficiente para que terminen las animaciones finitas.
+/// No usa pumpAndSettle porque el fondo se anima en bucle.
+Future<void> settle(WidgetTester tester) async {
+  for (var i = 0; i < 6; i++) {
+    await tester.pump(const Duration(milliseconds: 300));
+  }
+}
+
+Finder navItem(String label) =>
+    find.descendant(of: find.byType(NavigationBar), matching: find.text(label));
 
 void main() {
-  late Directory tempDir;
-
   setUpAll(() async {
-    tempDir = await Directory.systemTemp.createTemp('fino_test_');
-    Hive.init(tempDir.path);
-    Hive.registerAdapter(IncomeAdapter());
-    Hive.registerAdapter(ExpenseAdapter());
-    Hive.registerAdapter(BuyAdapter());
-    Hive.registerAdapter(DebtAdapter());
+    await initializeDateFormatting('es');
+    await initializeDateFormatting('es_CO');
+    registerAdapters();
   });
 
   setUp(() async {
-    await Hive.openBox<Income>('incomesBox');
-    await Hive.openBox<Expense>('expensesBox');
-    await Hive.openBox<Buy>('buysBox');
-    await Hive.openBox<Debt>('debtBox');
-  });
-
-  tearDown(() async {
-    await Hive.deleteFromDisk();
-  });
-
-  tearDownAll(() async {
-    await Hive.close();
-    await tempDir.delete(recursive: true);
-  });
-
-  group('IncomeProvider', () {
-    test('agrega, actualiza y elimina ingresos', () async {
-      final provider = IncomeProvider();
-      expect(provider.incomes, isEmpty);
-
-      await provider.addIncome(Income(name: 'Salario', amount: 1000));
-      expect(provider.incomes.single.name, 'Salario');
-
-      await provider.updateIncome(0, Income(name: 'Salario', amount: 1500));
-      expect(provider.incomes.single.amount, 1500);
-
-      await provider.deleteIncome(0);
-      expect(provider.incomes, isEmpty);
-    });
-  });
-
-  group('ExpenseProvider', () {
-    test('agrega y elimina gastos', () async {
-      final provider = ExpenseProvider();
-      await provider.addExpense(Expense(name: 'Arriendo', amount: 500));
-      await provider.addExpense(Expense(name: 'Comida', amount: 200));
-      expect(provider.expenses.length, 2);
-
-      await provider.deleteExpense(0);
-      expect(provider.expenses.single.name, 'Comida');
-    });
-  });
-
-  group('DebtProvider', () {
-    test('agrega y actualiza deudas', () async {
-      final provider = DebtProvider();
-      await provider.addDebt(Debt(name: 'Tarjeta', amount: 300));
-      await provider.updateDebt(0, Debt(name: 'Tarjeta', amount: 250));
-      expect(provider.debts.single.amount, 250);
-    });
-  });
-
-  group('BuyProvider', () {
-    test('los datos persisten en la caja de Hive', () async {
-      await BuyProvider().addBuy(Buy(name: 'Leche', amount: 5));
-      expect(BuyProvider().buys.single.name, 'Leche');
-    });
-  });
-
-  testWidgets('la app muestra las cinco pestañas', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (_) => IncomeProvider()),
-          ChangeNotifierProvider(create: (_) => ExpenseProvider()),
-          ChangeNotifierProvider(create: (_) => BuyProvider()),
-          ChangeNotifierProvider(create: (_) => DebtProvider()),
-        ],
-        child: const finoApp(),
-      ),
+    // Cajas en memoria: no tocan el disco, así que funcionan con el reloj
+    // simulado de testWidgets.
+    await Hive.openBox<Income>(RecordKind.income.boxName, bytes: Uint8List(0));
+    await Hive.openBox<Expense>(
+      RecordKind.expense.boxName,
+      bytes: Uint8List(0),
     );
-    await tester.pump();
+    await Hive.openBox<Buy>(RecordKind.buy.boxName, bytes: Uint8List(0));
+    await Hive.openBox<Debt>(RecordKind.debt.boxName, bytes: Uint8List(0));
+  });
 
-    expect(find.text('Fino App'), findsOneWidget);
-    for (final label in ['Home', 'Ingresos', 'Gastos', 'Deudas', 'Compras']) {
-      expect(find.text(label), findsWidgets);
+  tearDown(() => Hive.close());
+
+  Future<void> pumpApp(WidgetTester tester) async {
+    // Tamaño de un teléfono típico.
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const AppProviders(child: FinoApp()));
+    await settle(tester);
+  }
+
+  testWidgets('muestra el resumen y la navegación inferior', (tester) async {
+    await pumpApp(tester);
+
+    expect(find.text('Resumen'), findsOneWidget);
+    expect(find.text('Balance general'), findsOneWidget);
+    for (final label in ['Inicio', 'Ingresos', 'Gastos', 'Deudas', 'Compras']) {
+      expect(navItem(label), findsOneWidget);
     }
+    expect(find.text('Sin movimientos todavía'), findsOneWidget);
+  });
+
+  testWidgets('agregar un ingreso actualiza la lista y el balance', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+
+    await tester.tap(navItem('Ingresos'));
+    await settle(tester);
+    expect(find.text('Aún no hay ingresos'), findsOneWidget);
+
+    await tester.tap(find.text('Agregar ingreso'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextFormField).at(0), '1.500.000');
+    await tester.enterText(find.byType(TextFormField).at(1), 'Nómina');
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Salario'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Agregar'));
+    await settle(tester);
+
+    expect(find.text(r'+$ 1.500.000'), findsOneWidget);
+    expect(find.text('1 registro'), findsOneWidget);
+
+    await tester.tap(navItem('Inicio'));
+    await settle(tester);
+    expect(find.text('Nómina'), findsOneWidget);
+    expect(find.text(r'$ 1.500.000'), findsWidgets);
+  });
+
+  testWidgets('el formulario rechaza datos inválidos', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(navItem('Gastos'));
+    await settle(tester);
+
+    await tester.tap(find.text('Agregar gasto'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextFormField).at(0), 'abc');
+    await tester.tap(find.widgetWithText(FilledButton, 'Agregar'));
+    await settle(tester);
+
+    expect(find.text('Ingresa un monto mayor que cero'), findsOneWidget);
+    expect(find.text('Ingresa una descripción'), findsOneWidget);
   });
 }
