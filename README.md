@@ -4,10 +4,11 @@
 
 ## Características Principales
 
-- **Resumen**: Balance general (`ingresos − (gastos + deudas)`) con un anillo que indica qué parte de los ingresos ya está comprometida, desglose por sección, gráfica de ingresos y gastos de los últimos 6 meses y movimientos recientes.
+- **Resumen**: Balance general (`ingresos − gastos`) con un anillo que indica qué parte de los ingresos ya se gastó, balance proyectado tras pagar lo pendiente, desglose por sección, gráfica de los últimos 6 meses y movimientos recientes.
 - **Ingresos, gastos, deudas y compras**: Cada registro tiene monto, descripción, categoría, fecha y una nota opcional. Toca un registro para editarlo y deslízalo a la izquierda para borrarlo (con opción de deshacer).
-- **Deudas canceladas**: Toca el icono de una deuda para marcarla como cancelada. Sigue contando en el balance (ese dinero ya salió) y el resumen muestra cuánto falta por pagar.
-- **Lista de compras**: Marca las compras como hechas y registra las que aún no tienen precio para definirlo después.
+- **Deudas y compras pendientes**: No afectan el balance mientras estén pendientes. Al tocar su icono para marcarlas como pagadas o compradas se registra el gasto automáticamente (categoría «Deudas» o «Compras»); si se desmarcan, ese gasto se elimina. Es la misma lógica de apps como Money Lover o Wallet.
+- **Compras sin precio**: Se pueden registrar con «precio por definir»; al marcarlas como compradas la app pide el precio.
+- **Categorías propias**: Crea categorías desde el formulario con «+ Nueva»; mantén presionada una categoría propia para eliminarla.
 - **Filtro por mes**: Cada sección muestra el total del mes elegido.
 - **Montos en pesos colombianos**: Acepta `1.500.000`, `1500,50` o `$ 20.000`.
 - **Modo claro y oscuro**: Sigue el tema del sistema hasta que eliges uno desde la barra superior; la elección se recuerda.
@@ -18,6 +19,7 @@
 Ideas que aún **no** están implementadas:
 
 - Registrar abonos parciales a una deuda.
+- Elegir un icono para las categorías propias.
 - Exportar y respaldar los datos.
 
 ## Capturas de Pantalla
@@ -36,6 +38,8 @@ flutter run
 ```
 
 Para elegir un dispositivo concreto usa `flutter devices` y `flutter run -d <device-id>`. Para generar la APK: `flutter build apk --release` (queda en `build/app/outputs/flutter-apk/`).
+
+El icono se genera desde `assets/branding/` con `dart run flutter_launcher_icons`.
 
 ## Desarrollo
 
@@ -61,7 +65,8 @@ lib/
   theme/, widgets/     # Sistema de diseño, gráficas y componentes animados
   utils/               # Formato y lectura de montos en COP
 test/                  # Pruebas de providers, montos, datos antiguos e interfaz
-assets/                # Ilustraciones SVG, tipografía Poppins e icono
+assets/                # Ilustraciones SVG, tipografía Poppins y fuente
+                       # del icono (assets/branding, no se empaqueta)
 ```
 
 ### Persistencia
@@ -73,6 +78,7 @@ assets/                # Ilustraciones SVG, tipografía Poppins e icono
 | `buysBox` | `Buy` | 2 |
 | `debtBox` | `Debt` | 3 |
 | `settingsBox` | `Settings` | 5 |
+| `categoriesBox` | Lista de textos por sección | — |
 
 Los adaptadores de los registros están escritos a mano en `lib/models/finance_record.dart`; la tabla de campos está documentada ahí. Al agregar un campo, usa un número nuevo y nunca reutilices uno existente: los datos guardados por versiones anteriores deben poder leerse (hay pruebas en `test/legacy_data_test.dart`).
 

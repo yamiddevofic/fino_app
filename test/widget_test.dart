@@ -7,6 +7,7 @@ import 'package:fino_app/models/expenses_model.dart';
 import 'package:fino_app/models/incomes_model.dart';
 import 'package:fino_app/models/record_kind.dart';
 import 'package:fino_app/models/settings_model.dart';
+import 'package:fino_app/provider/category_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
@@ -41,6 +42,7 @@ void main() {
     await Hive.openBox<Buy>(RecordKind.buy.boxName, bytes: Uint8List(0));
     await Hive.openBox<Debt>(RecordKind.debt.boxName, bytes: Uint8List(0));
     await Hive.openBox<Settings>(settingsBoxName, bytes: Uint8List(0));
+    await Hive.openBox<List<dynamic>>(categoriesBoxName, bytes: Uint8List(0));
   });
 
   tearDown(() => Hive.close());
@@ -106,27 +108,91 @@ void main() {
     expect(find.text('Ingresa una descripción'), findsOneWidget);
   });
 
-  testWidgets('una deuda se marca como cancelada y sigue en el balance', (
+  testWidgets('pagar una deuda la pasa a gastos y actualiza el balance', (
     tester,
   ) async {
+    await Hive.box<Income>(
+      RecordKind.income.boxName,
+    ).add(Income(name: 'Nómina', amount: 1000000, date: DateTime(2026, 9, 1)));
     await Hive.box<Debt>(
       RecordKind.debt.boxName,
     ).add(Debt(name: 'Tarjeta', amount: 300000, date: DateTime(2026, 9, 1)));
     await pumpApp(tester);
 
+    // Pendiente: no afecta el balance, sí el proyectado.
+    expect(find.text(r'$ 1.000.000'), findsWidgets);
+    expect(find.text(r'Proyectado: $ 700.000'), findsOneWidget);
+
     await tester.tap(navItem('Deudas'));
     await settle(tester);
     expect(find.text('1 registro · 1 pendiente'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Marcar como cancelada'));
+    await tester.tap(find.byTooltip('Marcar como pagada'));
     await settle(tester);
-    expect(find.text('1 registro · todas canceladas'), findsOneWidget);
-    expect(Hive.box<Debt>(RecordKind.debt.boxName).values.single.done, isTrue);
+    expect(find.text('1 registro · todas pagadas'), findsOneWidget);
+    expect(find.text(r'Se registró un gasto de $ 300.000'), findsOneWidget);
+    final expense = Hive.box<Expense>(RecordKind.expense.boxName).values.single;
+    expect(expense.category, 'Deudas');
 
     await tester.tap(navItem('Inicio'));
     await settle(tester);
-    expect(find.text('Todas canceladas'), findsOneWidget);
-    expect(find.text(r'-$ 300.000'), findsOneWidget);
+    expect(find.text('Todas pagadas'), findsOneWidget);
+    expect(find.text(r'$ 700.000'), findsOneWidget);
+    expect(find.textContaining('Proyectado'), findsNothing);
+  });
+
+  testWidgets('marcar una compra sin precio pide el precio', (tester) async {
+    await Hive.box<Buy>(RecordKind.buy.boxName).add(
+      Buy(
+        name: 'Nevera',
+        amount: 0,
+        date: DateTime(2026, 9, 1),
+        pricePending: true,
+      ),
+    );
+    await pumpApp(tester);
+    await tester.tap(navItem('Compras'));
+    await settle(tester);
+
+    await tester.tap(find.byTooltip('Marcar como comprada'));
+    await settle(tester);
+    expect(find.text('¿Cuánto costó Nevera?'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField).last, '2.500.000');
+    await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+    await settle(tester);
+
+    final buy = Hive.box<Buy>(RecordKind.buy.boxName).values.single;
+    expect(buy.done, isTrue);
+    expect(buy.amount, 2500000);
+    expect(
+      Hive.box<Expense>(RecordKind.expense.boxName).values.single.amount,
+      2500000,
+    );
+  });
+
+  testWidgets('se puede crear una categoría desde el formulario', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    await tester.tap(navItem('Gastos'));
+    await settle(tester);
+    await tester.tap(find.text('Agregar gasto'));
+    await settle(tester);
+
+    await tester.tap(find.widgetWithText(ActionChip, 'Nueva'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextFormField).last, 'Mascotas');
+    await tester.tap(find.widgetWithText(FilledButton, 'Crear'));
+    await settle(tester);
+
+    expect(find.widgetWithText(ChoiceChip, 'Mascotas'), findsOneWidget);
+    final chip = tester.widget<ChoiceChip>(
+      find.widgetWithText(ChoiceChip, 'Mascotas'),
+    );
+    expect(chip.selected, isTrue);
+    expect(Hive.box<List<dynamic>>(categoriesBoxName).get('expense'), [
+      'Mascotas',
+    ]);
   });
 
   testWidgets('una compra se puede guardar con precio por definir', (

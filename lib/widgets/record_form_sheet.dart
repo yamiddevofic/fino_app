@@ -1,9 +1,11 @@
 import 'package:fino_app/models/finance_record.dart';
 import 'package:fino_app/models/record_kind.dart';
+import 'package:fino_app/provider/category_provider.dart';
 import 'package:fino_app/theme/app_theme.dart';
 import 'package:fino_app/utils/amount.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 /// Abre el formulario para crear un registro, o para editar [initial].
 /// Devuelve el registro nuevo, o `null` si el usuario cancela.
@@ -49,6 +51,56 @@ class _RecordFormState<T extends FinanceRecord> extends State<_RecordForm<T>> {
 
   bool get _editing => widget.initial != null;
 
+  /// Categorías disponibles, más la del registro si ya no existe (por
+  /// ejemplo, una categoría propia que se borró).
+  List<String> _categoryOptions(CategoryProvider categories) {
+    final options = categories.all(widget.kind);
+    final current = widget.initial?.category;
+    return current == null || options.contains(current)
+        ? options
+        : [...options, current];
+  }
+
+  Future<void> _addCategory() async {
+    final categories = context.read<CategoryProvider>();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => _NewCategoryDialog(
+        validate: (value) => categories.validate(widget.kind, value),
+        accent: widget.kind.accent(context),
+      ),
+    );
+    if (name == null) return;
+    await categories.add(widget.kind, name);
+    setState(() => _category = name.trim());
+  }
+
+  Future<void> _removeCategory(String name) async {
+    final categories = context.read<CategoryProvider>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('¿Eliminar "$name"?'),
+        content: const Text('Los registros que ya la usan la conservan.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await categories.remove(widget.kind, name);
+    if (_category == name && widget.initial?.category != name) {
+      setState(() => _category = null);
+    }
+  }
+
   @override
   void dispose() {
     _amount.dispose();
@@ -89,6 +141,7 @@ class _RecordFormState<T extends FinanceRecord> extends State<_RecordForm<T>> {
     final tokens = AppTokens.of(context);
     final accent = widget.kind.accent(context);
     final textTheme = Theme.of(context).textTheme;
+    final categories = context.watch<CategoryProvider>();
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
@@ -172,21 +225,32 @@ class _RecordFormState<T extends FinanceRecord> extends State<_RecordForm<T>> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  for (final c in widget.kind.categories)
-                    ChoiceChip(
-                      label: Text(c),
-                      selected: _category == c,
-                      showCheckmark: false,
-                      selectedColor: accent.withValues(alpha: 0.16),
-                      labelStyle: TextStyle(
-                        color: _category == c ? accent : tokens.text,
-                        fontWeight: _category == c
-                            ? FontWeight.w600
-                            : FontWeight.w400,
+                  for (final c in _categoryOptions(categories))
+                    GestureDetector(
+                      onLongPress: categories.isCustom(widget.kind, c)
+                          ? () => _removeCategory(c)
+                          : null,
+                      child: ChoiceChip(
+                        label: Text(c),
+                        selected: _category == c,
+                        showCheckmark: false,
+                        selectedColor: accent.withValues(alpha: 0.16),
+                        labelStyle: TextStyle(
+                          color: _category == c ? accent : tokens.text,
+                          fontWeight: _category == c
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                        ),
+                        onSelected: (selected) =>
+                            setState(() => _category = selected ? c : null),
                       ),
-                      onSelected: (selected) =>
-                          setState(() => _category = selected ? c : null),
                     ),
+                  ActionChip(
+                    avatar: Icon(Icons.add_rounded, size: 18, color: accent),
+                    label: const Text('Nueva'),
+                    tooltip: 'Crear categoría',
+                    onPressed: _addCategory,
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -233,6 +297,66 @@ class _RecordFormState<T extends FinanceRecord> extends State<_RecordForm<T>> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _NewCategoryDialog extends StatefulWidget {
+  const _NewCategoryDialog({required this.validate, required this.accent});
+
+  final String? Function(String) validate;
+  final Color accent;
+
+  @override
+  State<_NewCategoryDialog> createState() => _NewCategoryDialogState();
+}
+
+class _NewCategoryDialogState extends State<_NewCategoryDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.pop(context, _controller.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Nueva categoría'),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _controller,
+          autofocus: true,
+          maxLength: maxCategoryLength,
+          cursorColor: widget.accent,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(hintText: 'Ej.: Mascotas'),
+          onFieldSubmitted: (_) => _submit(),
+          validator: (value) => widget.validate(value ?? ''),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: widget.accent,
+            foregroundColor: onColor(widget.accent),
+          ),
+          onPressed: _submit,
+          child: const Text('Crear'),
+        ),
+      ],
     );
   }
 }

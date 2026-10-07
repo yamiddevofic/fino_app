@@ -12,5 +12,6 @@ class Debt extends FinanceRecord {
     super.note,
     super.done,
     super.pricePending,
+    super.expenseKey,
   });
 }

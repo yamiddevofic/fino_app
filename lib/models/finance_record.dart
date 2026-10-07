@@ -13,6 +13,7 @@ import 'package:hive/hive.dart';
 /// | 4 | compra con precio por definir | v1.0.0 (rediseño) |
 /// | 5 | categoría | 1.1.0 |
 /// | 6 | nota | 1.1.0 |
+/// | 7 | clave del gasto generado al pagar la deuda o hacer la compra | 1.2.0 |
 ///
 /// Todos los campos salvo 0 y 1 son opcionales, de modo que los registros
 /// guardados por versiones anteriores se siguen leyendo.
@@ -25,6 +26,7 @@ abstract class FinanceRecord extends HiveObject {
     this.note,
     this.done = false,
     this.pricePending = false,
+    this.expenseKey,
   });
 
   final String name;
@@ -38,6 +40,10 @@ abstract class FinanceRecord extends HiveObject {
 
   /// Compra registrada sin precio; [amount] vale 0 hasta que se defina.
   final bool pricePending;
+
+  /// Clave en la caja de gastos del gasto que se registró al marcar esta
+  /// deuda o compra como lista. Se usa para borrarlo si se desmarca.
+  final int? expenseKey;
 }
 
 typedef RecordBuilder<T extends FinanceRecord> =
@@ -49,15 +55,20 @@ typedef RecordBuilder<T extends FinanceRecord> =
       String? note,
       bool done,
       bool pricePending,
+      int? expenseKey,
     });
 
-/// Copia [record] cambiando solo los valores indicados.
+const _keep = Object();
+
+/// Copia [record] cambiando solo los valores indicados. [expenseKey] acepta
+/// `null` para quitar el enlace con el gasto.
 T copyRecord<T extends FinanceRecord>(
   RecordBuilder<T> builder,
   T record, {
   double? amount,
   bool? done,
   bool? pricePending,
+  Object? expenseKey = _keep,
 }) => builder(
   name: record.name,
   amount: amount ?? record.amount,
@@ -66,6 +77,9 @@ T copyRecord<T extends FinanceRecord>(
   note: record.note,
   done: done ?? record.done,
   pricePending: pricePending ?? record.pricePending,
+  expenseKey: identical(expenseKey, _keep)
+      ? record.expenseKey
+      : expenseKey as int?,
 );
 
 /// Adaptador de Hive compartido por todos los tipos de registro.
@@ -96,13 +110,14 @@ class FinanceRecordAdapter<T extends FinanceRecord> extends TypeAdapter<T> {
       pricePending: field<bool>(4) ?? false,
       category: field<String>(5),
       note: field<String>(6),
+      expenseKey: field<int>(7),
     );
   }
 
   @override
   void write(BinaryWriter writer, T obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -116,6 +131,8 @@ class FinanceRecordAdapter<T extends FinanceRecord> extends TypeAdapter<T> {
       ..writeByte(5)
       ..write(obj.category)
       ..writeByte(6)
-      ..write(obj.note);
+      ..write(obj.note)
+      ..writeByte(7)
+      ..write(obj.expenseKey);
   }
 }
