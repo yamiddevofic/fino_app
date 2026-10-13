@@ -14,8 +14,8 @@ class Settings {
   Settings({this.isDarkMode = false});
 }
 
-/// Tema de la app. Sigue al sistema hasta que el usuario elige uno, y
-/// recuerda esa elección entre sesiones.
+/// Tema de la app. Empieza en modo oscuro y recuerda la elección del
+/// usuario entre sesiones.
 class SettingsProvider extends ChangeNotifier {
   SettingsProvider() : _box = Hive.box<Settings>(settingsBoxName);
 
@@ -23,7 +23,7 @@ class SettingsProvider extends ChangeNotifier {
 
   ThemeMode get themeMode {
     final settings = _box.get(_settingsKey);
-    if (settings == null) return ThemeMode.system;
+    if (settings == null) return ThemeMode.dark;
     return settings.isDarkMode ? ThemeMode.dark : ThemeMode.light;
   }
 

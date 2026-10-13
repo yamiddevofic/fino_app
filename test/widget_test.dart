@@ -217,17 +217,23 @@ void main() {
     expect(find.text('1 registro · 1 por comprar'), findsOneWidget);
   });
 
-  testWidgets('el tema elegido se guarda', (tester) async {
+  testWidgets('empieza en modo oscuro y recuerda el tema elegido', (
+    tester,
+  ) async {
     await pumpApp(tester);
     expect(Hive.box<Settings>(settingsBoxName).isEmpty, isTrue);
+    expect(
+      Theme.of(tester.element(find.text('Resumen'))).brightness,
+      Brightness.dark,
+    );
 
-    await tester.tap(find.byTooltip('Modo oscuro'));
+    await tester.tap(find.byTooltip('Modo claro'));
     await settle(tester);
 
     expect(
       Hive.box<Settings>(settingsBoxName).values.single.isDarkMode,
-      isTrue,
+      isFalse,
     );
-    expect(find.byTooltip('Modo claro'), findsOneWidget);
+    expect(find.byTooltip('Modo oscuro'), findsOneWidget);
   });
 }

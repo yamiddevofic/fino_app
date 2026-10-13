@@ -11,7 +11,7 @@
 - **Categorías propias**: Crea categorías desde el formulario con «+ Nueva»; mantén presionada una categoría propia para eliminarla.
 - **Filtro por mes**: Cada sección muestra el total del mes elegido.
 - **Montos en pesos colombianos**: Acepta `1.500.000`, `1500,50` o `$ 20.000`.
-- **Modo claro y oscuro**: Sigue el tema del sistema hasta que eliges uno desde la barra superior; la elección se recuerda.
+- **Modo oscuro por defecto**: La app empieza en modo oscuro; puedes cambiar a claro desde la barra superior y la elección se recuerda.
 - **Diseño para móvil**: Navegación inferior, fondo animado sutil e ilustraciones SVG. Las animaciones se desactivan si el sistema pide reducir el movimiento.
 
 ## Hoja de Ruta
@@ -39,7 +39,7 @@ flutter run
 
 Para elegir un dispositivo concreto usa `flutter devices` y `flutter run -d <device-id>`. Para generar la APK: `flutter build apk --release` (queda en `build/app/outputs/flutter-apk/`).
 
-El icono se genera desde `assets/branding/` con `dart run flutter_launcher_icons`.
+El icono (una F con los colores de ingresos, deudas y compras y una alcancía) se genera desde `assets/branding/` con `dart run flutter_launcher_icons`; el logo de la barra superior es la misma marca en `assets/svg/logo.svg`.
 
 ## Desarrollo
 
