@@ -259,12 +259,7 @@ class _TopBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
       child: Row(
         children: [
-          SvgPicture.asset(
-            'assets/svg/logo.svg',
-            width: 32,
-            height: 32,
-            theme: SvgTheme(currentColor: tokens.brand),
-          ),
+          SvgPicture.asset('assets/svg/logo.svg', width: 36, height: 36),
           const SizedBox(width: 12),
           Expanded(
             child: AnimatedSwitcher(
