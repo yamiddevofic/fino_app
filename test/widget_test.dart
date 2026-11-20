@@ -93,6 +93,50 @@ void main() {
     expect(find.text(r'$ 1.500.000'), findsWidgets);
   });
 
+  testWidgets('conserva el filtro al cambiar de pestaña', (tester) async {
+    final incomes = Hive.box<Income>(RecordKind.income.boxName);
+    await incomes.add(Income(name: 'Ingreso antiguo', amount: 50000));
+    await incomes.add(
+      Income(name: 'Ingreso con fecha', amount: 100000, date: DateTime(2026, 9)),
+    );
+    await pumpApp(tester);
+
+    await tester.tap(navItem('Ingresos'));
+    await settle(tester);
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Sin fecha'));
+    await settle(tester);
+    expect(find.text('Ingreso antiguo'), findsOneWidget);
+    expect(find.text('Ingreso con fecha'), findsNothing);
+
+    await tester.tap(navItem('Inicio'));
+    await settle(tester);
+    await tester.tap(navItem('Ingresos'));
+    await settle(tester);
+
+    expect(find.text('Ingreso antiguo'), findsOneWidget);
+    expect(find.text('Ingreso con fecha'), findsNothing);
+  });
+
+  testWidgets('permite eliminar un registro con el botón y deshacer', (
+    tester,
+  ) async {
+    final incomes = Hive.box<Income>(RecordKind.income.boxName);
+    await incomes.add(Income(name: 'Ingreso de prueba', amount: 50000));
+    await pumpApp(tester);
+    await tester.tap(navItem('Ingresos'));
+    await settle(tester);
+
+    await tester.tap(find.byTooltip('Eliminar registro'));
+    await settle(tester);
+    expect(incomes.isEmpty, isTrue);
+    expect(find.text('Ingreso de prueba'), findsNothing);
+
+    await tester.tap(find.text('Deshacer'));
+    await settle(tester);
+    expect(incomes.values.single.name, 'Ingreso de prueba');
+    expect(find.text('Ingreso de prueba'), findsOneWidget);
+  });
+
   testWidgets('el formulario rechaza datos inválidos', (tester) async {
     await pumpApp(tester);
     await tester.tap(navItem('Gastos'));

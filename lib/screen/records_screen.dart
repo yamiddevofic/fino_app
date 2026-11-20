@@ -305,6 +305,7 @@ class _RecordsScreenState<T extends FinanceRecord>
         record: record,
         kind: kind,
         onTap: () => _edit(record),
+        onDelete: () => _delete(record),
         onToggleDone: kind.canMarkDone ? () => _toggleSettled(record) : null,
       ),
     );

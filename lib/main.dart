@@ -156,10 +156,25 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends State<HomeShell>
+    with SingleTickerProviderStateMixin {
   int _index = 0;
+  late final _transition = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 260),
+  )..forward();
 
-  void _select(int index) => setState(() => _index = index);
+  void _select(int index) {
+    if (index == _index) return;
+    setState(() => _index = index);
+    _transition.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _transition.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -193,18 +208,20 @@ class _HomeShellState extends State<HomeShell> {
                 onToggleTheme: () => widget.onToggleTheme(isDark),
               ),
               Expanded(
-                child: TweenAnimationBuilder<double>(
-                  key: ValueKey(_index),
-                  tween: Tween(begin: 0, end: 1),
-                  duration: const Duration(milliseconds: 260),
-                  curve: Curves.easeOutCubic,
-                  builder: (context, t, child) => Opacity(
-                    opacity: t,
-                    child: Transform.translate(
-                      offset: Offset(0, 10 * (1 - t)),
-                      child: child,
-                    ),
-                  ),
+                child: AnimatedBuilder(
+                  animation: _transition,
+                  builder: (context, child) {
+                    final progress = Curves.easeOutCubic.transform(
+                      _transition.value,
+                    );
+                    return Opacity(
+                      opacity: progress,
+                      child: Transform.translate(
+                        offset: Offset(0, 10 * (1 - progress)),
+                        child: child,
+                      ),
+                    );
+                  },
                   child: IndexedStack(index: _index, children: pages),
                 ),
               ),

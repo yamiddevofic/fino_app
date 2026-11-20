@@ -17,12 +17,14 @@ class RecordTile extends StatelessWidget {
     required this.kind,
     this.onTap,
     this.onToggleDone,
+    this.onDelete,
   });
 
   final FinanceRecord record;
   final RecordKind kind;
   final VoidCallback? onTap;
   final VoidCallback? onToggleDone;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -112,6 +114,13 @@ class RecordTile extends StatelessWidget {
                       : tokens.text,
                   fontFeatures: tabularFigures,
                 ),
+              ),
+            if (onDelete != null)
+              IconButton(
+                tooltip: 'Eliminar registro',
+                onPressed: onDelete,
+                icon: const Icon(Icons.delete_outline_rounded),
+                color: tokens.textMuted,
               ),
           ],
         ),
