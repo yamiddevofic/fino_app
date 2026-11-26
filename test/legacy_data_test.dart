@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:fino_app/models/buys_model.dart';
 import 'package:fino_app/models/debts_model.dart';
+import 'package:fino_app/models/finance_record.dart';
 import 'package:fino_app/models/incomes_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
@@ -89,6 +90,32 @@ void main() {
     expect(debt.done, isTrue);
     expect(debt.note, isNull);
     expect(debt.expenseKey, isNull);
+    expect(debt.id, isNull);
+
+    await Hive.close();
+    await dir.delete(recursive: true);
+  });
+
+  test('el identificador para sincronizar (campo 8) se guarda', () async {
+    final dir = await Directory.systemTemp.createTemp('fino_id_');
+    Hive.init(dir.path);
+    Hive.registerAdapter(IncomeAdapter(), override: true);
+
+    final box = await Hive.openBox<Income>('incomesBox');
+    final id = newRecordId();
+    await box.add(Income(name: 'Salario', amount: 10, id: id));
+    await box.close();
+
+    final reopened = await Hive.openBox<Income>('incomesBox');
+    expect(reopened.values.single.id, id);
+    expect(
+      id,
+      matches(
+        RegExp(
+          r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+        ),
+      ),
+    );
 
     await Hive.close();
     await dir.delete(recursive: true);

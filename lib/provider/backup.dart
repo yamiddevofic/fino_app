@@ -87,6 +87,7 @@ class BackupSources {
       'done': r.done,
       'pricePending': r.pricePending,
       'expenseKey': r.expenseKey,
+      'id': r.id,
     };
     List<Object?> section(RecordProvider provider) => [
       for (final MapEntry(:key, :value) in provider.entries.entries)
@@ -187,7 +188,9 @@ extension BackupMerge on BackupSources {
       final counts = _counts(provider.records);
       final fresh = <T>[];
       for (final r in incoming.values) {
-        _consume(counts, r) ? skipped++ : fresh.add(r);
+        _consume(counts, r)
+            ? skipped++
+            : fresh.add(copyRecord(provider.builder, r, id: newRecordId()));
       }
       if (fresh.isNotEmpty) await provider.addAll(fresh);
       added += fresh.length;
@@ -233,7 +236,7 @@ extension BackupMerge on BackupSources {
         continue;
       }
       oldKeys.add(key);
-      fresh.add(value);
+      fresh.add(copyRecord(Expense.new, value, id: newRecordId()));
     }
     final newKeys = fresh.isEmpty
         ? const <int>[]
@@ -248,7 +251,12 @@ extension BackupMerge on BackupSources {
       if (records.isEmpty) return;
       await provider.addAll([
         for (final r in records)
-          copyRecord(provider.builder, r, expenseKey: keyMap[r.expenseKey]),
+          copyRecord(
+            provider.builder,
+            r,
+            expenseKey: keyMap[r.expenseKey],
+            id: newRecordId(),
+          ),
       ]);
       added += records.length;
     }
@@ -302,6 +310,10 @@ Backup parseBackup(String source) {
   );
 }
 
+final _uuid = RegExp(
+  r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+);
+
 /// Claves válidas en una caja de Hive.
 const _maxKey = 0xFFFFFFFF;
 
@@ -317,6 +329,7 @@ Map<int, T> _parseSection<T extends FinanceRecord>(
   }
 
   final result = <int, T>{};
+  final ids = <String>{};
   var nextKey = 0;
   for (final (index, item) in list.indexed) {
     BackupException invalid(String detail) => BackupException(
@@ -336,6 +349,12 @@ Map<int, T> _parseSection<T extends FinanceRecord>(
     };
     if (result.containsKey(key)) throw invalid('clave repetida');
     nextKey = (key + 1 > nextKey) ? key + 1 : nextKey;
+
+    final id = item['id'];
+    if (id != null && (id is! String || !_uuid.hasMatch(id))) {
+      throw invalid('identificador incorrecto');
+    }
+    if (id is String && !ids.add(id)) throw invalid('identificador repetido');
 
     final date = item['date'];
     final parsedDate = date is String ? DateTime.tryParse(date) : null;
@@ -357,6 +376,7 @@ Map<int, T> _parseSection<T extends FinanceRecord>(
       done: kind.canMarkDone && item['done'] == true,
       pricePending: kind.allowsPendingPrice && item['pricePending'] == true,
       expenseKey: expenseKey,
+      id: id as String?,
     );
   }
   return result;

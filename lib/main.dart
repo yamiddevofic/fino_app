@@ -1,17 +1,22 @@
 import 'dart:ui' show ImageFilter;
 
+import 'package:fino_app/config.dart';
 import 'package:fino_app/models/buys_model.dart';
 import 'package:fino_app/models/debts_model.dart';
 import 'package:fino_app/models/expenses_model.dart';
 import 'package:fino_app/models/incomes_model.dart';
 import 'package:fino_app/models/record_kind.dart';
 import 'package:fino_app/models/settings_model.dart';
+import 'package:fino_app/provider/app_lock.dart';
 import 'package:fino_app/provider/buy_provider.dart';
 import 'package:fino_app/provider/category_provider.dart';
 import 'package:fino_app/provider/debts_provider.dart';
 import 'package:fino_app/provider/expenses_provider.dart';
 import 'package:fino_app/provider/incomes_provider.dart';
 import 'package:fino_app/provider/record_provider.dart';
+import 'package:fino_app/provider/sync_outbox.dart';
+import 'package:fino_app/provider/sync_service.dart';
+import 'package:fino_app/screen/auth_screens.dart';
 import 'package:fino_app/screen/buys_screen.dart';
 import 'package:fino_app/screen/debt_screen.dart';
 import 'package:fino_app/screen/expenses_screen.dart';
@@ -20,12 +25,14 @@ import 'package:fino_app/screen/incomes_screen.dart';
 import 'package:fino_app/theme/app_theme.dart';
 import 'package:fino_app/widgets/animated_background.dart';
 import 'package:fino_app/widgets/backup_menu.dart';
+import 'package:fino_app/widgets/sync_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,8 +42,19 @@ Future<void> main() async {
   await Hive.initFlutter();
   registerAdapters();
   await openBoxes();
+  await ensureRecordIds();
 
-  runApp(const AppProviders(child: FinoApp()));
+  final supabase = await Supabase.initialize(
+    url: supabaseUrl,
+    publishableKey: supabasePublishableKey,
+  );
+
+  runApp(
+    AppProviders(
+      supabase: supabase.client,
+      child: const FinoApp(requireAuth: true),
+    ),
+  );
 }
 
 void registerAdapters() {
@@ -54,14 +72,27 @@ Future<void> openBoxes() async {
   await Hive.openBox<Debt>(RecordKind.debt.boxName);
   await Hive.openBox<Settings>(settingsBoxName);
   await Hive.openBox<List<dynamic>>(categoriesBoxName);
+  await Hive.openBox<String>(syncOutboxBoxName);
+  await Hive.openBox<String>(syncStateBoxName);
+  await Hive.openBox<String>(securityBoxName);
+}
+
+/// Asigna un UUID a los registros guardados por versiones anteriores, para
+/// poder sincronizarlos.
+Future<void> ensureRecordIds() async {
+  await IncomeProvider().ensureIds();
+  await ExpenseProvider().ensureIds();
+  await DebtProvider().ensureIds();
+  await BuyProvider().ensureIds();
 }
 
 /// Registra un provider por tipo de registro. Las cajas de Hive deben estar
-/// abiertas antes.
+/// abiertas antes. Con [supabase] también sincroniza con la nube.
 class AppProviders extends StatelessWidget {
-  const AppProviders({super.key, required this.child});
+  const AppProviders({super.key, required this.child, this.supabase});
 
   final Widget child;
+  final SupabaseClient? supabase;
 
   @override
   Widget build(BuildContext context) => MultiProvider(
@@ -78,17 +109,35 @@ class AppProviders extends StatelessWidget {
       ),
       ChangeNotifierProvider(create: (_) => SettingsProvider()),
       ChangeNotifierProvider(create: (_) => CategoryProvider()),
+      ChangeNotifierProvider(create: (_) => AppLock()),
+      if (supabase case final client?)
+        ChangeNotifierProvider(
+          create: (context) => SyncService(
+            client: client,
+            incomes: context.read<RecordProvider<Income>>(),
+            expenses: context.read<RecordProvider<Expense>>(),
+            debts: context.read<RecordProvider<Debt>>(),
+            buys: context.read<RecordProvider<Buy>>(),
+            categories: context.read<CategoryProvider>(),
+          )..start(),
+        ),
     ],
     child: child,
   );
 }
 
 class FinoApp extends StatelessWidget {
-  const FinoApp({super.key});
+  const FinoApp({super.key, this.requireAuth = false});
+
+  /// Pide iniciar sesión y el PIN antes de mostrar los datos.
+  final bool requireAuth;
 
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
+    final shell = HomeShell(
+      onToggleTheme: (isDark) => settings.setDarkMode(!isDark),
+    );
     return MaterialApp(
       title: 'Fino',
       debugShowCheckedModeBanner: false,
@@ -98,7 +147,7 @@ class FinoApp extends StatelessWidget {
       locale: const Locale('es', 'CO'),
       supportedLocales: const [Locale('es', 'CO'), Locale('es')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      home: HomeShell(onToggleTheme: (isDark) => settings.setDarkMode(!isDark)),
+      home: requireAuth ? AuthGate(child: shell) : shell,
     );
   }
 }
@@ -311,6 +360,7 @@ class _TopBar extends StatelessWidget {
               ),
             ),
           ),
+          const SyncButton(),
           const BackupMenuButton(),
         ],
       ),

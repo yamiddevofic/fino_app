@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:hive/hive.dart';
 
 /// Base común de ingresos, gastos, deudas y compras.
@@ -14,6 +16,7 @@ import 'package:hive/hive.dart';
 /// | 5 | categoría | 1.1.0 |
 /// | 6 | nota | 1.1.0 |
 /// | 7 | clave del gasto generado al pagar la deuda o hacer la compra | 1.2.0 |
+/// | 8 | identificador único para sincronizar con Supabase | 1.5.0 |
 ///
 /// Todos los campos salvo 0 y 1 son opcionales, de modo que los registros
 /// guardados por versiones anteriores se siguen leyendo.
@@ -27,6 +30,7 @@ abstract class FinanceRecord extends HiveObject {
     this.done = false,
     this.pricePending = false,
     this.expenseKey,
+    this.id,
   });
 
   final String name;
@@ -44,6 +48,10 @@ abstract class FinanceRecord extends HiveObject {
   /// Clave en la caja de gastos del gasto que se registró al marcar esta
   /// deuda o compra como lista. Se usa para borrarlo si se desmarca.
   final int? expenseKey;
+
+  /// UUID con el que se sincroniza. Los registros de versiones anteriores
+  /// no lo tienen hasta que [ensureRecordIds] se lo asigna.
+  final String? id;
 }
 
 typedef RecordBuilder<T extends FinanceRecord> =
@@ -56,12 +64,26 @@ typedef RecordBuilder<T extends FinanceRecord> =
       bool done,
       bool pricePending,
       int? expenseKey,
+      String? id,
     });
 
 const _keep = Object();
 
+final _random = Random.secure();
+
+/// UUID versión 4 aleatorio.
+String newRecordId() {
+  final b = List<int>.generate(16, (_) => _random.nextInt(256));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  final hex = [for (final x in b) x.toRadixString(16).padLeft(2, '0')].join();
+  return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-'
+      '${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}';
+}
+
 /// Copia [record] cambiando solo los valores indicados. [expenseKey] acepta
-/// `null` para quitar el enlace con el gasto.
+/// `null` para quitar el enlace con el gasto. La copia conserva el [id], de
+/// modo que sigue siendo el mismo registro al sincronizar.
 T copyRecord<T extends FinanceRecord>(
   RecordBuilder<T> builder,
   T record, {
@@ -69,6 +91,7 @@ T copyRecord<T extends FinanceRecord>(
   bool? done,
   bool? pricePending,
   Object? expenseKey = _keep,
+  String? id,
 }) => builder(
   name: record.name,
   amount: amount ?? record.amount,
@@ -80,6 +103,7 @@ T copyRecord<T extends FinanceRecord>(
   expenseKey: identical(expenseKey, _keep)
       ? record.expenseKey
       : expenseKey as int?,
+  id: id ?? record.id,
 );
 
 /// Adaptador de Hive compartido por todos los tipos de registro.
@@ -111,13 +135,14 @@ class FinanceRecordAdapter<T extends FinanceRecord> extends TypeAdapter<T> {
       category: field<String>(5),
       note: field<String>(6),
       expenseKey: field<int>(7),
+      id: field<String>(8),
     );
   }
 
   @override
   void write(BinaryWriter writer, T obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -133,6 +158,8 @@ class FinanceRecordAdapter<T extends FinanceRecord> extends TypeAdapter<T> {
       ..writeByte(6)
       ..write(obj.note)
       ..writeByte(7)
-      ..write(obj.expenseKey);
+      ..write(obj.expenseKey)
+      ..writeByte(8)
+      ..write(obj.id);
   }
 }

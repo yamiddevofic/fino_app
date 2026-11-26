@@ -1,6 +1,6 @@
 # FINO - Tu Asistente de Finanzas Personales
 
-**FINO** es una aplicación multiplataforma desarrollada con Flutter para registrar tus ingresos, gastos, deudas y compras, y ver en todo momento cuánto dinero te queda. Funciona de forma local: los datos se guardan en el dispositivo con [Hive](https://pub.dev/packages/hive), sin cuenta ni servidor.
+**FINO** es una aplicación multiplataforma desarrollada con Flutter para registrar tus ingresos, gastos, deudas y compras, y ver en todo momento cuánto dinero te queda. Guarda primero en el dispositivo con [Hive](https://pub.dev/packages/hive), así que funciona sin internet, y sincroniza con [Supabase](https://supabase.com) para tener los mismos datos en el celular y en el navegador.
 
 ## Características Principales
 
@@ -9,6 +9,8 @@
 - **Deudas y compras pendientes**: No afectan el balance mientras estén pendientes. Al tocar su icono para marcarlas como pagadas o compradas se registra el gasto automáticamente (categoría «Deudas» o «Compras»); si se desmarcan, ese gasto se elimina. Es la misma lógica de apps como Money Lover o Wallet.
 - **Compras sin precio**: Se pueden registrar con «precio por definir»; al marcarlas como compradas la app pide el precio.
 - **Categorías propias**: Crea categorías desde el formulario con «+ Nueva»; mantén presionada una categoría propia para eliminarla.
+- **Cuenta y sincronización**: Inicia sesión una vez por dispositivo con correo y contraseña; la app sube tus cambios a Supabase y baja los de tus otros dispositivos. Sin conexión sigue funcionando y sincroniza al volver la red. El icono de nube de la barra superior muestra el estado y permite sincronizar o cerrar sesión. También se puede usar sin cuenta.
+- **PIN**: Tras iniciar sesión la app pide un PIN de 4 dígitos para abrirse, también al volver después de más de un minuto en segundo plano. Si lo olvidas, «¿Olvidaste tu PIN?» pide la contraseña de la cuenta para crear uno nuevo.
 - **Exportar e importar datos**: Desde el menú de la barra superior (⋮) guarda un respaldo en un archivo JSON con todos los registros (ingresos, gastos, deudas y compras) y tus categorías propias. Al importar se muestra el contenido del respaldo y se elige entre **Combinar** (agrega lo que falta y omite los registros y categorías que ya existen, así que importar dos veces el mismo archivo no duplica nada) o **Reemplazar** (borra los datos actuales). En ambos casos las deudas y compras pagadas siguen enlazadas con su gasto.
 - **Filtro por mes**: Cada sección muestra el total del mes elegido.
 - **Montos en pesos colombianos**: Acepta `1.500.000`, `1500,50` o `$ 20.000`.
@@ -80,12 +82,20 @@ assets/                # Ilustraciones SVG, tipografía Poppins y fuente
 | `debtBox` | `Debt` | 3 |
 | `settingsBox` | `Settings` | 5 |
 | `categoriesBox` | Lista de textos por sección | — |
+| `syncOutbox` | Cambios pendientes de subir | — |
+| `syncState` | Cuenta y cursores de la sincronización | — |
+| `securityBox` | Hash del PIN | — |
+
+### Supabase
+
+El proyecto y la clave publicable están en `lib/config.dart`; la clave puede ir en la app porque las políticas de seguridad por filas (RLS) limitan cada cuenta a sus datos. El esquema está en `supabase/migrations/`: tablas `records` y `categories`, con `updated_at` fijado por el servidor como cursor de sincronización y `deleted_at` para propagar los borrados. La lógica está en `lib/provider/sync_service.dart` y `lib/provider/sync_outbox.dart`.
 
 Los adaptadores de los registros están escritos a mano en `lib/models/finance_record.dart`; la tabla de campos está documentada ahí. Al agregar un campo, usa un número nuevo y nunca reutilices uno existente: los datos guardados por versiones anteriores deben poder leerse (hay pruebas en `test/legacy_data_test.dart`).
 
 ## Limitaciones Conocidas
 
-- La persistencia es exclusivamente local: no hay copias de seguridad, sincronización entre dispositivos ni autenticación.
+- Si el mismo registro se edita en dos dispositivos sin conexión, al sincronizar gana el último que se sube.
+- Importar el mismo respaldo en dos dispositivos distintos duplica los registros en la cuenta: impórtalo solo en uno y deja que se sincronice.
 - No hay notificaciones ni recordatorios.
 
 ## Contribuciones

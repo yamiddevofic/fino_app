@@ -8,13 +8,17 @@ import 'package:fino_app/models/expenses_model.dart';
 import 'package:fino_app/models/incomes_model.dart';
 import 'package:fino_app/models/record_kind.dart';
 import 'package:fino_app/models/settings_model.dart';
+import 'package:fino_app/provider/app_lock.dart';
 import 'package:fino_app/provider/category_provider.dart';
+import 'package:fino_app/provider/sync_outbox.dart';
+import 'package:fino_app/provider/sync_service.dart';
 import 'package:fino_app/theme/app_theme.dart';
 import 'package:fino_app/widgets/backup_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:provider/provider.dart';
 
 /// Avanza el reloj lo suficiente para que terminen las animaciones finitas.
 /// No usa pumpAndSettle porque el fondo se anima en bucle.
@@ -65,6 +69,9 @@ void main() {
     await Hive.openBox<Debt>(RecordKind.debt.boxName, bytes: Uint8List(0));
     await Hive.openBox<Settings>(settingsBoxName, bytes: Uint8List(0));
     await Hive.openBox<List<dynamic>>(categoriesBoxName, bytes: Uint8List(0));
+    await Hive.openBox<String>(syncOutboxBoxName, bytes: Uint8List(0));
+    await Hive.openBox<String>(syncStateBoxName, bytes: Uint8List(0));
+    await Hive.openBox<String>(securityBoxName, bytes: Uint8List(0));
   });
 
   tearDown(() => Hive.close());
@@ -425,5 +432,42 @@ void main() {
 
     expect(find.text('El archivo no es un respaldo válido.'), findsOneWidget);
     expect(find.text('Importar respaldo'), findsNothing);
+  });
+
+  testWidgets('sin cuenta pide crear un PIN y luego lo exige', (tester) async {
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      const AppProviders(child: FinoApp(requireAuth: true)),
+    );
+    await settle(tester);
+
+    expect(find.text('Tu cuenta de Fino'), findsOneWidget);
+    await tester.tap(find.text('Usar sin cuenta por ahora'));
+    await settle(tester);
+
+    expect(find.text('Crea tu PIN'), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('pin')), '1357');
+    await tester.pump();
+    expect(find.text('Repite tu PIN'), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('pin')), '1357');
+    await settle(tester);
+    expect(find.text('Resumen'), findsOneWidget);
+
+    final lock = Provider.of<AppLock>(
+      tester.element(find.text('Resumen')),
+      listen: false,
+    )..lock();
+    await settle(tester);
+    expect(find.text('Ingresa tu PIN'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const ValueKey('pin')), '0000');
+    await tester.pump();
+    expect(find.text('PIN incorrecto'), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('pin')), '1357');
+    await settle(tester);
+    expect(find.text('Resumen'), findsOneWidget);
+    expect(lock.isLocked, isFalse);
   });
 }

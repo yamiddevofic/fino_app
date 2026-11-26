@@ -6,8 +6,9 @@ coherentes con la arquitectura actual.
 
 ## Contexto del proyecto
 
-FINO es una aplicacion Flutter de finanzas personales con persistencia local.
-La aplicacion no tiene backend ni sincronizacion remota.
+FINO es una aplicacion Flutter de finanzas personales. Guarda primero en
+Hive y sincroniza con Supabase (`lib/provider/sync_service.dart`); el esquema
+esta en `supabase/migrations/`.
 
 - Punto de entrada: `lib/main.dart`.
 - UI: `lib/screen/` (Inicio y `RecordsScreen<T>`, comun a las cuatro
@@ -26,7 +27,8 @@ La aplicacion no tiene backend ni sincronizacion remota.
   generales sin necesidad concreta.
 - Mantiene la separacion entre pantallas, providers y modelos.
 - Usa los providers existentes para modificar datos y notificar cambios a la
-  UI; evita acceder directamente a Hive desde una pantalla.
+  UI; evita acceder directamente a Hive desde una pantalla. Los providers
+  anotan cada cambio en `SyncOutbox` para subirlo; no lo saltes.
 - Si cambias un modelo Hive, conserva los `typeId` y `field` existentes para no
   romper datos persistidos.
 - Los adaptadores de los registros estan escritos a mano en
