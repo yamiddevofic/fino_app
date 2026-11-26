@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:fino_app/main.dart';
@@ -8,6 +9,8 @@ import 'package:fino_app/models/incomes_model.dart';
 import 'package:fino_app/models/record_kind.dart';
 import 'package:fino_app/models/settings_model.dart';
 import 'package:fino_app/provider/category_provider.dart';
+import 'package:fino_app/theme/app_theme.dart';
+import 'package:fino_app/widgets/backup_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
@@ -19,6 +22,25 @@ Future<void> settle(WidgetTester tester) async {
   for (var i = 0; i < 6; i++) {
     await tester.pump(const Duration(milliseconds: 300));
   }
+}
+
+/// Archivos simulados: guarda lo exportado y entrega [toPick] al importar.
+class FakeBackupFiles extends BackupFiles {
+  FakeBackupFiles({this.toPick});
+
+  Uint8List? toPick;
+  String? savedName;
+  String? savedText;
+
+  @override
+  Future<bool> save(String fileName, Uint8List bytes) async {
+    savedName = fileName;
+    savedText = utf8.decode(bytes);
+    return true;
+  }
+
+  @override
+  Future<Uint8List?> pick() async => toPick;
 }
 
 Finder navItem(String label) =>
@@ -97,7 +119,11 @@ void main() {
     final incomes = Hive.box<Income>(RecordKind.income.boxName);
     await incomes.add(Income(name: 'Ingreso antiguo', amount: 50000));
     await incomes.add(
-      Income(name: 'Ingreso con fecha', amount: 100000, date: DateTime(2026, 9)),
+      Income(
+        name: 'Ingreso con fecha',
+        amount: 100000,
+        date: DateTime(2026, 9),
+      ),
     );
     await pumpApp(tester);
 
@@ -279,5 +305,125 @@ void main() {
       isFalse,
     );
     expect(find.byTooltip('Modo oscuro'), findsOneWidget);
+  });
+
+  testWidgets('la barra superior ofrece exportar e importar', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.byTooltip('Respaldo de datos'));
+    await settle(tester);
+    expect(find.text('Exportar datos'), findsOneWidget);
+    expect(find.text('Importar datos'), findsOneWidget);
+  });
+
+  testWidgets('exporta un respaldo y lo vuelve a importar', (tester) async {
+    final files = FakeBackupFiles();
+    await tester.pumpWidget(
+      AppProviders(
+        child: MaterialApp(
+          theme: buildTheme(Brightness.dark),
+          home: Scaffold(
+            appBar: AppBar(actions: [BackupMenuButton(files: files)]),
+          ),
+        ),
+      ),
+    );
+    final incomes = Hive.box<Income>(RecordKind.income.boxName);
+    await incomes.add(Income(name: 'Nómina', amount: 1000));
+    await Hive.box<List<dynamic>>(
+      categoriesBoxName,
+    ).put('expense', ['Mascotas']);
+
+    Future<void> choose(String option) async {
+      await tester.tap(find.byTooltip('Respaldo de datos'));
+      await settle(tester);
+      await tester.tap(find.text(option));
+      await settle(tester);
+    }
+
+    await choose('Exportar datos');
+    expect(
+      files.savedName,
+      matches(RegExp(r'^fino-respaldo-\d{4}-\d{2}-\d{2}\.json$')),
+    );
+    expect(find.text('Respaldo guardado con 1 registro'), findsOneWidget);
+
+    // Cambia los datos y restaura el respaldo.
+    await incomes.clear();
+    await incomes.add(Income(name: 'Otro', amount: 5));
+    await incomes.add(Income(name: 'Otro más', amount: 5));
+    files.toPick = utf8.encode(files.savedText!);
+
+    await choose('Importar datos');
+    expect(
+      find.textContaining('1 registro y 1 categoría propia'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('conserva tus 2 registros'), findsOneWidget);
+    await tester.tap(find.text('Reemplazar'));
+    await settle(tester);
+
+    expect(incomes.values.single.name, 'Nómina');
+    expect(Hive.box<List<dynamic>>(categoriesBoxName).get('expense'), [
+      'Mascotas',
+    ]);
+    expect(find.text('Se importaron 1 registro'), findsOneWidget);
+  });
+
+  testWidgets('combinar agrega el respaldo sin borrar lo actual', (
+    tester,
+  ) async {
+    final incomes = Hive.box<Income>(RecordKind.income.boxName);
+    await incomes.add(Income(name: 'Nómina', amount: 1000));
+    final files = FakeBackupFiles();
+    await tester.pumpWidget(
+      AppProviders(
+        child: MaterialApp(
+          theme: buildTheme(Brightness.dark),
+          home: Scaffold(
+            appBar: AppBar(actions: [BackupMenuButton(files: files)]),
+          ),
+        ),
+      ),
+    );
+
+    Future<void> choose(String option) async {
+      await tester.tap(find.byTooltip('Respaldo de datos'));
+      await settle(tester);
+      await tester.tap(find.text(option));
+      await settle(tester);
+    }
+
+    await choose('Exportar datos');
+    await incomes.add(Income(name: 'Bono', amount: 200));
+    files.toPick = utf8.encode(files.savedText!);
+
+    await choose('Importar datos');
+    await tester.tap(find.text('Combinar'));
+    await settle(tester);
+
+    // La nómina del respaldo ya existía y no se duplica; el bono se conserva.
+    expect(incomes.values.map((r) => r.name), ['Nómina', 'Bono']);
+    expect(find.text('Todo el respaldo ya estaba en la app'), findsOneWidget);
+  });
+
+  testWidgets('avisa si el archivo elegido no es un respaldo', (tester) async {
+    final files = FakeBackupFiles(toPick: utf8.encode('hola'));
+    await tester.pumpWidget(
+      AppProviders(
+        child: MaterialApp(
+          theme: buildTheme(Brightness.dark),
+          home: Scaffold(
+            appBar: AppBar(actions: [BackupMenuButton(files: files)]),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byTooltip('Respaldo de datos'));
+    await settle(tester);
+    await tester.tap(find.text('Importar datos'));
+    await settle(tester);
+
+    expect(find.text('El archivo no es un respaldo válido.'), findsOneWidget);
+    expect(find.text('Importar respaldo'), findsNothing);
   });
 }

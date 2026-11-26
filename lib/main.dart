@@ -19,6 +19,7 @@ import 'package:fino_app/screen/home_screen.dart';
 import 'package:fino_app/screen/incomes_screen.dart';
 import 'package:fino_app/theme/app_theme.dart';
 import 'package:fino_app/widgets/animated_background.dart';
+import 'package:fino_app/widgets/backup_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -310,6 +311,7 @@ class _TopBar extends StatelessWidget {
               ),
             ),
           ),
+          const BackupMenuButton(),
         ],
       ),
     );
