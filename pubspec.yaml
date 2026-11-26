@@ -2,7 +2,7 @@ name: fino_app
 description: "Fino: asistente de finanzas personales."
 publish_to: 'none'
 
-version: 1.3.0+4
+version: 1.4.0+5
 
 environment:
   sdk: ^3.9.0
