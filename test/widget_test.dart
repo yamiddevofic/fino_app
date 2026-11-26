@@ -358,8 +358,8 @@ void main() {
       find.textContaining('1 registro y 1 categoría propia'),
       findsOneWidget,
     );
-    expect(find.textContaining('Reemplazará tus 2 registros'), findsOneWidget);
-    await tester.tap(find.text('Importar'));
+    expect(find.textContaining('conserva tus 2 registros'), findsOneWidget);
+    await tester.tap(find.text('Reemplazar'));
     await settle(tester);
 
     expect(incomes.values.single.name, 'Nómina');
@@ -367,6 +367,43 @@ void main() {
       'Mascotas',
     ]);
     expect(find.text('Se importaron 1 registro'), findsOneWidget);
+  });
+
+  testWidgets('combinar agrega el respaldo sin borrar lo actual', (
+    tester,
+  ) async {
+    final incomes = Hive.box<Income>(RecordKind.income.boxName);
+    await incomes.add(Income(name: 'Nómina', amount: 1000));
+    final files = FakeBackupFiles();
+    await tester.pumpWidget(
+      AppProviders(
+        child: MaterialApp(
+          theme: buildTheme(Brightness.dark),
+          home: Scaffold(
+            appBar: AppBar(actions: [BackupMenuButton(files: files)]),
+          ),
+        ),
+      ),
+    );
+
+    Future<void> choose(String option) async {
+      await tester.tap(find.byTooltip('Respaldo de datos'));
+      await settle(tester);
+      await tester.tap(find.text(option));
+      await settle(tester);
+    }
+
+    await choose('Exportar datos');
+    await incomes.add(Income(name: 'Bono', amount: 200));
+    files.toPick = utf8.encode(files.savedText!);
+
+    await choose('Importar datos');
+    await tester.tap(find.text('Combinar'));
+    await settle(tester);
+
+    // La nómina del respaldo ya existía y no se duplica; el bono se conserva.
+    expect(incomes.values.map((r) => r.name), ['Nómina', 'Bono']);
+    expect(find.text('Todo el respaldo ya estaba en la app'), findsOneWidget);
   });
 
   testWidgets('avisa si el archivo elegido no es un respaldo', (tester) async {

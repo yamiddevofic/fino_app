@@ -206,4 +206,91 @@ void main() {
     // El enlace a un gasto inexistente se descarta.
     expect(backup.debts[4]!.expenseKey, isNull);
   });
+
+  test('combinar agrega lo nuevo y no duplica lo que ya existe', () async {
+    final original = sources();
+    await original.incomes.add(
+      Income(name: 'Nómina', amount: 1000, date: DateTime(2026, 9, 30)),
+    );
+    await original.incomes.add(
+      Income(name: 'Bono', amount: 200, date: DateTime(2026, 10, 1)),
+    );
+    await original.categories.add(RecordKind.expense, 'Mascotas');
+    final backup = parseBackup(original.export());
+
+    await Hive.deleteFromDisk();
+    await openBoxes();
+    final target = sources();
+    await target.incomes.add(
+      Income(name: 'Nómina', amount: 1000, date: DateTime(2026, 9, 30)),
+    );
+    await target.expenses.add(Expense(name: 'Propio', amount: 5));
+    await target.categories.add(RecordKind.expense, 'mascotas');
+    await target.categories.add(RecordKind.buy, 'Regalos');
+
+    final result = await target.merge(backup);
+    expect(result.added, 1);
+    expect(result.skipped, 1);
+    expect(result.categoriesAdded, 0);
+    expect(target.incomes.records.map((r) => r.name), ['Bono', 'Nómina']);
+    expect(target.expenses.records.single.name, 'Propio');
+    expect(target.categories.custom(RecordKind.expense), ['mascotas']);
+    expect(target.categories.custom(RecordKind.buy), ['Regalos']);
+
+    // Combinar otra vez el mismo respaldo no cambia nada.
+    final again = await target.merge(backup);
+    expect(again.added, 0);
+    expect(again.skipped, 2);
+    expect(target.incomes.records, hasLength(2));
+  });
+
+  test('combinar reenlaza las deudas pagadas con su nuevo gasto', () async {
+    final original = sources();
+    await original.debts.add(Debt(name: 'Préstamo', amount: 300));
+    await toggleSettled(
+      records: original.debts,
+      expenses: original.expenses,
+      kind: RecordKind.debt,
+      record: original.debts.records.single,
+    );
+    final backup = parseBackup(original.export());
+
+    await Hive.deleteFromDisk();
+    await openBoxes();
+    final target = sources();
+    // Gastos previos ocupan las claves que traía el respaldo.
+    await target.expenses.add(Expense(name: 'Mercado', amount: 80));
+    await target.expenses.add(Expense(name: 'Taxi', amount: 10));
+
+    final result = await target.merge(backup);
+    expect(result.added, 2);
+
+    final debt = target.debts.records.single;
+    expect(debt.done, isTrue);
+    expect(target.expenses.entries[debt.expenseKey]!.name, 'Préstamo');
+
+    // Al desmarcarla se quita su gasto y no uno de los que ya estaban.
+    await toggleSettled(
+      records: target.debts,
+      expenses: target.expenses,
+      kind: RecordKind.debt,
+      record: debt,
+    );
+    expect(target.expenses.records.map((r) => r.name).toSet(), {
+      'Mercado',
+      'Taxi',
+    });
+
+    // Si la deuda ya existe, combinar no duplica ni ella ni su gasto.
+    await toggleSettled(
+      records: target.debts,
+      expenses: target.expenses,
+      kind: RecordKind.debt,
+      record: target.debts.records.single,
+    );
+    final before = target.expenses.records.length;
+    final again = await target.merge(backup);
+    expect(again.added, 0);
+    expect(target.expenses.records, hasLength(before));
+  });
 }

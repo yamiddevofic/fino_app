@@ -91,17 +91,23 @@ class BackupMenuButton extends StatelessWidget {
     }
     if (!context.mounted) return;
 
-    final confirmed = await showDialog<bool>(
+    final mode = await showDialog<_ImportMode>(
       context: context,
-      builder: (context) => _ConfirmRestoreDialog(
+      builder: (context) => _ConfirmImportDialog(
         backup: backup,
         currentCount: sources.recordCount,
       ),
     );
-    if (confirmed != true) return;
-
-    await sources.restore(backup);
-    _show(messenger, 'Se importaron ${_records(backup.recordCount)}');
+    switch (mode) {
+      case null:
+        return;
+      case _ImportMode.replace:
+        await sources.restore(backup);
+        _show(messenger, 'Se importaron ${_records(backup.recordCount)}');
+      case _ImportMode.merge:
+        final result = await sources.merge(backup);
+        _show(messenger, _mergeMessage(result));
+    }
   }
 
   void _show(ScaffoldMessengerState messenger, String message) => messenger
@@ -137,10 +143,29 @@ class BackupMenuButton extends StatelessWidget {
   }
 }
 
+String _mergeMessage(MergeResult result) {
+  final MergeResult(:added, :skipped, :categoriesAdded) = result;
+  if (added == 0 && categoriesAdded == 0) {
+    return 'Todo el respaldo ya estaba en la app';
+  }
+  return [
+        'Se agregaron ${_records(added)}',
+        if (categoriesAdded > 0)
+          categoriesAdded == 1 ? '1 categoría' : '$categoriesAdded categorías',
+      ].join(' y ') +
+      switch (skipped) {
+        0 => '',
+        1 => '; 1 ya existía',
+        _ => '; $skipped ya existían',
+      };
+}
+
 String _records(int count) => count == 1 ? '1 registro' : '$count registros';
 
-class _ConfirmRestoreDialog extends StatelessWidget {
-  const _ConfirmRestoreDialog({
+enum _ImportMode { merge, replace }
+
+class _ConfirmImportDialog extends StatelessWidget {
+  const _ConfirmImportDialog({
     required this.backup,
     required this.currentCount,
   });
@@ -155,6 +180,7 @@ class _ConfirmRestoreDialog extends StatelessWidget {
         ? ''
         : ' (${DateFormat.yMMMd('es').add_Hm().format(exportedAt)})';
     final categories = backup.categoryCount;
+    final hasData = currentCount > 0;
     final contents = [
       _records(backup.recordCount),
       if (categories > 0)
@@ -167,20 +193,29 @@ class _ConfirmRestoreDialog extends StatelessWidget {
       content: Text(
         [
           'El respaldo$when tiene $contents.',
-          if (currentCount > 0)
-            'Reemplazará tus ${_records(currentCount)} actuales y tus '
-                'categorías propias. Si quieres conservarlos, exporta antes '
-                'un respaldo.',
+          if (hasData) ...[
+            'Combinar agrega lo que no tengas todavía y conserva tus '
+                '${_records(currentCount)} actuales.',
+            'Reemplazar borra tus datos actuales y deja solo los del '
+                'respaldo.',
+          ],
         ].join('\n\n'),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context, false),
+          onPressed: () => Navigator.pop(context),
           child: const Text('Cancelar'),
         ),
+        if (hasData)
+          TextButton(
+            onPressed: () => Navigator.pop(context, _ImportMode.replace),
+            child: const Text('Reemplazar'),
+          ),
         FilledButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('Importar'),
+          // Sin datos actuales ambos modos dan lo mismo; combinar es el
+          // más seguro.
+          onPressed: () => Navigator.pop(context, _ImportMode.merge),
+          child: Text(hasData ? 'Combinar' : 'Importar'),
         ),
       ],
     );

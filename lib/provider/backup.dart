@@ -120,6 +120,150 @@ class BackupSources {
   }
 }
 
+/// Resultado de combinar un respaldo con los datos actuales.
+class MergeResult {
+  const MergeResult({
+    required this.added,
+    required this.skipped,
+    required this.categoriesAdded,
+  });
+
+  /// Registros nuevos guardados.
+  final int added;
+
+  /// Registros omitidos porque ya existían.
+  final int skipped;
+  final int categoriesAdded;
+}
+
+/// Contenido de un registro, sin su clave. Dos registros con la misma huella
+/// se consideran el mismo al combinar.
+typedef _Fingerprint = (
+  String,
+  double,
+  DateTime?,
+  String?,
+  String?,
+  bool,
+  bool,
+);
+
+_Fingerprint _fingerprint(FinanceRecord r) =>
+    (r.name, r.amount, r.date, r.category, r.note, r.done, r.pricePending);
+
+/// Cuántas veces aparece cada huella en [records].
+Map<_Fingerprint, int> _counts(Iterable<FinanceRecord> records) {
+  final counts = <_Fingerprint, int>{};
+  for (final r in records) {
+    counts.update(_fingerprint(r), (n) => n + 1, ifAbsent: () => 1);
+  }
+  return counts;
+}
+
+/// Consume una aparición de [record] en [counts]. Devuelve `true` si ya
+/// existía, de modo que importar dos veces el mismo respaldo no duplica nada.
+bool _consume(Map<_Fingerprint, int> counts, FinanceRecord record) {
+  final key = _fingerprint(record);
+  final n = counts[key] ?? 0;
+  if (n == 0) return false;
+  counts[key] = n - 1;
+  return true;
+}
+
+extension BackupMerge on BackupSources {
+  /// Agrega a los datos actuales los registros y categorías de [backup] que
+  /// todavía no existen.
+  ///
+  /// Una deuda o compra pagada y el gasto que generó se tratan juntos: si la
+  /// deuda ya existía se omite también su gasto, y si es nueva su gasto se
+  /// guarda aunque coincida con otro, para que cada una tenga el suyo.
+  Future<MergeResult> merge(Backup backup) async {
+    var added = 0, skipped = 0;
+
+    Future<void> mergeSimple<T extends FinanceRecord>(
+      RecordProvider<T> provider,
+      Map<int, T> incoming,
+    ) async {
+      final counts = _counts(provider.records);
+      final fresh = <T>[];
+      for (final r in incoming.values) {
+        _consume(counts, r) ? skipped++ : fresh.add(r);
+      }
+      if (fresh.isNotEmpty) await provider.addAll(fresh);
+      added += fresh.length;
+    }
+
+    // Deudas y compras nuevas, y qué gastos del respaldo van con cada una.
+    final linkedExpenses = <int>{};
+    final skippedExpenses = <int>{};
+    List<T> pendingLinked<T extends FinanceRecord>(
+      RecordProvider<T> provider,
+      Map<int, T> incoming,
+    ) {
+      final counts = _counts(provider.records);
+      final fresh = <T>[];
+      for (final r in incoming.values) {
+        final key = r.expenseKey;
+        if (_consume(counts, r)) {
+          skipped++;
+          if (key != null) skippedExpenses.add(key);
+        } else {
+          fresh.add(r);
+          if (key != null) linkedExpenses.add(key);
+        }
+      }
+      return fresh;
+    }
+
+    final freshDebts = pendingLinked(debts, backup.debts);
+    final freshBuys = pendingLinked(buys, backup.buys);
+
+    await mergeSimple(incomes, backup.incomes);
+
+    // Gastos: los enlazados a una deuda o compra nueva siempre se guardan;
+    // los de una ya existente se omiten; el resto se compara por contenido.
+    final counts = _counts(expenses.records);
+    final oldKeys = <int>[];
+    final fresh = <Expense>[];
+    for (final MapEntry(:key, :value) in backup.expenses.entries) {
+      final isNew = linkedExpenses.contains(key);
+      if (!isNew &&
+          (skippedExpenses.contains(key) || _consume(counts, value))) {
+        skipped++;
+        continue;
+      }
+      oldKeys.add(key);
+      fresh.add(value);
+    }
+    final newKeys = fresh.isEmpty
+        ? const <int>[]
+        : await expenses.addAll(fresh);
+    added += fresh.length;
+    final keyMap = Map.fromIterables(oldKeys, newKeys);
+
+    Future<void> addLinked<T extends FinanceRecord>(
+      RecordProvider<T> provider,
+      List<T> records,
+    ) async {
+      if (records.isEmpty) return;
+      await provider.addAll([
+        for (final r in records)
+          copyRecord(provider.builder, r, expenseKey: keyMap[r.expenseKey]),
+      ]);
+      added += records.length;
+    }
+
+    await addLinked(debts, freshDebts);
+    await addLinked(buys, freshBuys);
+
+    return MergeResult(
+      added: added,
+      skipped: skipped,
+      categoriesAdded: await categories.addAll(backup.categories),
+    );
+  }
+}
+
 /// Lee y valida un respaldo completo antes de tocar ningún dato. Lanza
 /// [BackupException] si el contenido no es un respaldo de Fino válido.
 Backup parseBackup(String source) {

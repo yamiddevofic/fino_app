@@ -58,6 +58,13 @@ class RecordProvider<T extends FinanceRecord> with ChangeNotifier {
     _reload();
   }
 
+  /// Guarda [records] y devuelve sus claves, en el mismo orden.
+  Future<List<int>> addAll(List<T> records) async {
+    final keys = (await _box.addAll(records)).cast<int>().toList();
+    _reload();
+    return keys;
+  }
+
   /// Guarda [record] y devuelve su clave en la caja.
   Future<int> add(T record) async {
     final key = await _box.add(record);
