@@ -45,6 +45,19 @@ class RecordProvider<T extends FinanceRecord> with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Registros con su clave en la caja, en el orden en que se guardaron.
+  Map<int, T> get entries => {
+    for (final key in _box.keys) key as int: _box.get(key) as T,
+  };
+
+  /// Sustituye todos los registros por [entries] conservando sus claves, de
+  /// modo que los enlaces de deudas y compras con su gasto siguen valiendo.
+  Future<void> replaceAll(Map<int, T> entries) async {
+    await _box.clear();
+    await _box.putAll(entries);
+    _reload();
+  }
+
   /// Guarda [record] y devuelve su clave en la caja.
   Future<int> add(T record) async {
     final key = await _box.add(record);

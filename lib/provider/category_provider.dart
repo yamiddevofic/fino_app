@@ -44,6 +44,16 @@ class CategoryProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sustituye las categorías del usuario de todas las secciones. Una
+  /// sección ausente de [custom] queda sin categorías propias.
+  Future<void> replaceAll(Map<RecordKind, List<String>> custom) async {
+    await _box.clear();
+    for (final MapEntry(:key, :value) in custom.entries) {
+      if (value.isNotEmpty) await _box.put(key.name, value);
+    }
+    notifyListeners();
+  }
+
   /// Quita una categoría del usuario. Los registros que la usan la conservan.
   Future<void> remove(RecordKind kind, String name) async {
     await _box.put(kind.name, [...custom(kind)]..remove(name));

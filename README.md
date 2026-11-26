@@ -9,6 +9,7 @@
 - **Deudas y compras pendientes**: No afectan el balance mientras estén pendientes. Al tocar su icono para marcarlas como pagadas o compradas se registra el gasto automáticamente (categoría «Deudas» o «Compras»); si se desmarcan, ese gasto se elimina. Es la misma lógica de apps como Money Lover o Wallet.
 - **Compras sin precio**: Se pueden registrar con «precio por definir»; al marcarlas como compradas la app pide el precio.
 - **Categorías propias**: Crea categorías desde el formulario con «+ Nueva»; mantén presionada una categoría propia para eliminarla.
+- **Exportar e importar datos**: Desde el menú de la barra superior (⋮) guarda un respaldo en un archivo JSON con todos los registros (ingresos, gastos, deudas y compras) y tus categorías propias. Al importar un respaldo se muestra su contenido y, tras confirmar, reemplaza los datos actuales; las deudas y compras pagadas siguen enlazadas con su gasto.
 - **Filtro por mes**: Cada sección muestra el total del mes elegido.
 - **Montos en pesos colombianos**: Acepta `1.500.000`, `1500,50` o `$ 20.000`.
 - **Modo oscuro por defecto**: La app empieza en modo oscuro; puedes cambiar a claro desde la barra superior y la elección se recuerda.
@@ -20,7 +21,8 @@ Ideas que aún **no** están implementadas:
 
 - Registrar abonos parciales a una deuda.
 - Elegir un icono para las categorías propias.
-- Exportar y respaldar los datos.
+- Importar un respaldo combinándolo con los datos actuales en lugar de reemplazarlos.
+- Exportar a CSV para abrir los datos en una hoja de cálculo.
 
 ## Capturas de Pantalla
 
